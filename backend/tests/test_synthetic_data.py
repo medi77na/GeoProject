@@ -1,9 +1,3 @@
-import sys
-import os
-
-# Add project root to the path to resolve 'backend' module
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-
 from backend.services import generate_synthetic_data
 
 

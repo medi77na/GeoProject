@@ -68,6 +68,25 @@ print(result.traffic["Bello"][:3], result.pollution["Bello"][:3])
 
 Scenario "B" represents an intervention with reduced traffic and pollution during peaks compared to scenario "A".
 
+## Simulation engine
+
+The module `backend/services/simulation_engine.py` defines `SimulationParams`, `SimulationResult`, and `run_simulation(...)`. It takes a `SyntheticDataResult` as input and returns simulated traffic and pollution series per zone.
+
+```python
+from backend.services import (
+    SimulationParams,
+    generate_synthetic_data,
+    run_simulation,
+)
+
+synthetic = generate_synthetic_data(["Bello", "Medellin"], horizon=24, seed=3)
+params = SimulationParams(alpha=0.7, beta=0.4)
+simulation = run_simulation(synthetic, steps=24, scenario="B", params=params)
+print(simulation.traffic["Bello"][:3])
+```
+
+Scenario "B" reduces peak-hour traffic compared to scenario "A", resulting in lower pollution in those intervals.
+
 ## Code quality
 
 We use `ruff` for linting, `black` for formatting, `isort` for import ordering, and `pytest` for automated tests. Run all of them locally before pushing changes:

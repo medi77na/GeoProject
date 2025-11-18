@@ -1,113 +1,204 @@
 You are working inside the local repository of the "Urban Simulator" project.
-Goal: implement a synthetic data generator for traffic (rho) and pollution (C) as a backend service, with basic tests and documentation.
+
+Goal: implement a simple discrete-time simulation engine for traffic and pollution, using the existing synthetic data generator, plus tests and minimal docs.
+
 Constraints:
-- Only touch backend code and README.md.
-- Keep the implementation simple, deterministic with an optional random seed, and easy to read.
-- Do NOT expose any HTTP endpoint here. This is an internal service for future use by the simulation engine and /simulate.
+- Only touch backend service modules, backend tests, and README.md.
+- Do NOT add any HTTP endpoints.
+- Keep the model simple, deterministic (no random calls here), and easy to understand.
+
 Tasks:
-1) Create or overwrite 'backend/services/synthetic_data.py' with the following content:
+
+1) Create or overwrite `backend/services/simulation_engine.py` with this content:
+
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence
-import numpy as np
+from typing import Dict, List, Optional
+
+from .synthetic_data import SyntheticDataResult
+
+
 @dataclass
-class SyntheticDataResult:
+class SimulationParams:
+    alpha: float = 0.6          # emission factor: how strongly traffic increases pollution
+    beta: float = 0.3           # dispersion factor: how strongly pollution decays
+    inertia: float = 0.5        # how much the previous traffic state influences the new one
+    dispersion_factor: float = 1.0  # base dispersion term in pollution update
+
+
+@dataclass
+class SimulationResult:
     time: List[int]
     traffic: Dict[str, List[float]]
     pollution: Dict[str, List[float]]
-def generate_synthetic_data(
-    zones: Sequence[str],
-    horizon: int = 24,
+    scenario: str
+
+
+def run_simulation(
+    synthetic_data: SyntheticDataResult,
+    steps: Optional[int] = None,
     scenario: str = "A",
-    traffic_level: str = "medium",
-    seed: Optional[int] = None,
-) -> SyntheticDataResult:
+    params: Optional[SimulationParams] = None,
+) -> SimulationResult:
     """
-    Generate synthetic traffic and pollution time series per zone.
+    Run a simple discrete-time simulation of traffic and pollution per zone.
 
     Args:
-        zones: list of zone names (e.g. ["Bello", "Medellin", "Envigado", "Itagui"]).
-        horizon: number of time steps.
-        scenario: "A" for baseline, "B" for an intervention with reduced traffic.
-        traffic_level: "low", "medium", or "high" global traffic intensity.
-        seed: optional random seed for reproducibility.
+        synthetic_data: base synthetic series (rho and C) per zone.
+        steps: number of simulation steps. If None, uses len(synthetic_data.time).
+        scenario: "A" for baseline, "B" for an intervention with reduced traffic in peak hours.
+        params: simulation parameters; default values are reasonable for Phase 1.
+
     Returns:
-        SyntheticDataResult with:
-        - time: list of ints from 0 to horizon-1
-        - traffic: dict[zone] -> list[float] in approx [0, 1]
-        - pollution: dict[zone] -> list[float] >= 0
+        SimulationResult with time, simulated traffic and pollution, and scenario label.
     """
-    if horizon <= 0:
-        raise ValueError("horizon must be positive")
     if scenario not in {"A", "B"}:
         raise ValueError('scenario must be "A" or "B"')
-    if traffic_level not in {"low", "medium", "high"}:
-        raise ValueError('traffic_level must be "low", "medium", or "high"')
-    rng = np.random.default_rng(seed)
-    base_by_level = {
-        "low": 0.3,
-        "medium": 0.6,
-        "high": 0.85,
-    }
-    base_level = base_by_level[traffic_level]
 
-    # Scenario multiplier: B has less traffic during peak hours.
-    if scenario == "A":
-        peak_multiplier = 1.0
-    else:  # scenario B
-        peak_multiplier = 0.7
-    time = list(range(horizon))
-    traffic: Dict[str, List[float]] = {}
-    pollution: Dict[str, List[float]] = {}
-    for zone in zones:
+    if params is None:
+        params = SimulationParams()
+
+    if steps is None:
+        steps = len(synthetic_data.time)
+
+    if steps <= 0:
+        raise ValueError("steps must be positive")
+
+    time = list(range(steps))
+    sim_traffic: Dict[str, List[float]] = {}
+    sim_pollution: Dict[str, List[float]] = {}
+
+    for zone, base_traffic_series in synthetic_data.traffic.items():
+        if zone not in synthetic_data.pollution:
+            raise ValueError(f"Zone {zone!r} missing in pollution series")
+
+        base_pollution_series = synthetic_data.pollution[zone]
+        if len(base_traffic_series) == 0 or len(base_pollution_series) == 0:
+            raise ValueError(f"Empty series for zone {zone!r}")
+
+        rho_prev = float(base_traffic_series[0])
+        c_prev = float(base_pollution_series[0])
+
         zone_traffic: List[float] = []
         zone_pollution: List[float] = []
-        # Small zone-specific offset to differentiate zones.
-        zone_offset = rng.normal(0.0, 0.05)
+
         for t in time:
-            # Simple daily pattern: two peaks (morning and evening) using sine waves.
-            morning_peak = np.sin(np.pi * t / max(horizon - 1, 1)) ** 2
-            evening_peak = np.sin(np.pi * (t - horizon / 2) / max(horizon - 1, 1)) ** 2
-            pattern = 0.4 * (morning_peak + evening_peak)
-            noise = rng.normal(0.0, 0.05)
-            value = base_level + pattern + zone_offset + noise
-            # Apply scenario reduction in peaks for scenario B.
+            base_idx = min(t, len(base_traffic_series) - 1)
+            base_rho = float(base_traffic_series[base_idx])
+
+            # Scenario B reduces traffic during typical peak hours.
             if scenario == "B" and (6 <= t <= 9 or 17 <= t <= 20):
-                value *= peak_multiplier
-            # Clamp to [0, 1]
-            value = float(max(0.0, min(1.0, value)))
-            zone_traffic.append(value)
-            # Pollution: linear relation plus noise and a minimum floor.
-            emission_coeff = 70.0
-            dispersion = 15.0
-            pollution_noise = rng.normal(0.0, 3.0)
-            c_value = emission_coeff * value - dispersion + pollution_noise
-            c_value = float(max(0.0, c_value))
-            zone_pollution.append(c_value)
-        traffic[zone] = zone_traffic
-        pollution[zone] = zone_pollution
-    return SyntheticDataResult(time=time, traffic=traffic, pollution=pollution)
-2) Make sure 'backend/services/__init__.py' exists and exposes the public API:
-   - If the file does not exist, create it.
+                base_rho *= 0.8
+
+            # Discrete update for traffic: mix previous state and base value.
+            rho_t = (1.0 - params.inertia) * base_rho + params.inertia * rho_prev
+            rho_t = max(0.0, min(1.0, rho_t))
+
+            # Discrete update for pollution.
+            c_t = c_prev + params.alpha * rho_t - params.beta * params.dispersion_factor
+            c_t = max(0.0, c_t)
+
+            zone_traffic.append(float(rho_t))
+            zone_pollution.append(float(c_t))
+
+            rho_prev = rho_t
+            c_prev = c_t
+
+        sim_traffic[zone] = zone_traffic
+        sim_pollution[zone] = zone_pollution
+
+    return SimulationResult(time=time, traffic=sim_traffic, pollution=sim_pollution, scenario=scenario)
+
+2) Update `backend/services/__init__.py` so that it also exposes the simulation engine API:
+   - Keep the existing imports.
    - Add:
-from .synthetic_data import SyntheticDataResult, generate_synthetic_data
-3) Create a new test module 'backend/tests/test_synthetic_data.py' with three tests:
-- 'test_synthetic_data_shapes()':
-  - Call 'generate_synthetic_data' with zones = ["Bello", "Medellin"], horizon=24, scenario="A".
-  - Assert that:
-    - result.time has length 24,
-    - both 'traffic["Bello"]' and 'traffic["Medellin"]' have length 24,
-    - both pollution series have length 24.
-- 'test_synthetic_data_scenarios_different()':
-  - Call the function twice with the same zones and horizon, but scenario "A" vs "B", using the same seed (e.g. seed=123).
-  - Compare the average traffic for at least one zone (e.g. "Medellin") and assert that the means are different, and that scenario "B" has lower average traffic.
-- 'test_synthetic_data_reproducible_with_seed()':
-  - Call the function twice with identical parameters and the same seed.
-  - Assert that all time, traffic and pollution values are exactly equal between the two results.
-4) Update 'README.md':
-   - Add a short section "Synthetic data generator" explaining:
-     - the existence and purpose of 'backend/services/synthetic_data.py',
-     - that it provides 'generate_synthetic_data(...)' returning 'SyntheticDataResult',
-     - a minimal usage example (import, call, and print some values),
-     - that scenario "B" represents an intervention with reduced traffic/pollution compared to scenario "A".
-5) Do NOT modify CI config, endpoints or other services.
-   At the end, print a short summary of created/updated files, without staging or committing anything.
+
+from .simulation_engine import SimulationParams, SimulationResult, run_simulation
+
+3) Create a new test module `backend/tests/test_simulation_engine.py` with the following tests:
+
+from statistics import mean
+
+from backend.services import (
+    SimulationParams,
+    generate_synthetic_data,
+    run_simulation,
+)
+
+
+ZONES = ["Bello", "Medellin"]
+
+
+def _base_synthetic():
+    return generate_synthetic_data(
+        zones=ZONES,
+        horizon=24,
+        scenario="A",
+        traffic_level="medium",
+        seed=42,
+    )
+
+
+def test_simulation_shapes():
+    synthetic = _base_synthetic()
+    steps = 24
+
+    result = run_simulation(synthetic_data=synthetic, steps=steps, scenario="A")
+
+    assert len(result.time) == steps
+    for zone in ZONES:
+        assert len(result.traffic[zone]) == steps
+        assert len(result.pollution[zone]) == steps
+
+
+def test_simulation_is_deterministic():
+    synthetic = _base_synthetic()
+    params = SimulationParams(alpha=0.7, beta=0.3, inertia=0.4)
+
+    r1 = run_simulation(synthetic, steps=24, scenario="A", params=params)
+    r2 = run_simulation(synthetic, steps=24, scenario="A", params=params)
+
+    assert r1.time == r2.time
+    assert r1.traffic == r2.traffic
+    assert r1.pollution == r2.pollution
+
+
+def test_higher_alpha_increases_pollution():
+    synthetic = _base_synthetic()
+
+    low_alpha = SimulationParams(alpha=0.2, beta=0.3)
+    high_alpha = SimulationParams(alpha=1.0, beta=0.3)
+
+    sim_low = run_simulation(synthetic, steps=24, scenario="A", params=low_alpha)
+    sim_high = run_simulation(synthetic, steps=24, scenario="A", params=high_alpha)
+
+    zone = "Medellin"
+    avg_low = mean(sim_low.pollution[zone])
+    avg_high = mean(sim_high.pollution[zone])
+
+    assert avg_high > avg_low
+
+
+def test_scenario_a_vs_b_differs():
+    synthetic = _base_synthetic()
+    params = SimulationParams()
+
+    sim_a = run_simulation(synthetic, steps=24, scenario="A", params=params)
+    sim_b = run_simulation(synthetic, steps=24, scenario="B", params=params)
+
+    zone = "Medellin"
+    avg_a = mean(sim_a.traffic[zone])
+    avg_b = mean(sim_b.traffic[zone])
+
+    # In scenario B, peak-hour traffic should be lower on average.
+    assert avg_b < avg_a
+
+4) Update `README.md`:
+   - Add a short section "Simulation engine" explaining:
+     - that `backend/services/simulation_engine.py` implements `SimulationParams`, `SimulationResult` and `run_simulation(...)`,
+     - that it takes `SyntheticDataResult` as input and produces simulated series per zone,
+     - a minimal usage example (similar to the one in the design above),
+     - that scenario "B" reduces peak-hour traffic compared to "A".
+
+5) Do NOT modify CI config or any FastAPI endpoints.
+
+At the end, print a short summary of which files were created or updated, without staging or committing anything.
