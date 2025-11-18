@@ -50,6 +50,24 @@ Run the backend locally with:
 uvicorn backend.main:app --reload --port 8000
 ```
 
+## Synthetic data generator
+
+The module `backend/services/synthetic_data.py` provides `generate_synthetic_data(...)`, which returns a `SyntheticDataResult` containing time, traffic (rho), and pollution (C) series for each zone. Use it internally to mock scenarios before the real simulator is ready:
+
+```python
+from backend.services import generate_synthetic_data
+
+result = generate_synthetic_data(
+    zones=["Bello", "Medellin"],
+    horizon=24,
+    scenario="B",
+    seed=7,
+)
+print(result.traffic["Bello"][:3], result.pollution["Bello"][:3])
+```
+
+Scenario "B" represents an intervention with reduced traffic and pollution during peaks compared to scenario "A".
+
 ## Code quality
 
 We use `ruff` for linting, `black` for formatting, `isort` for import ordering, and `pytest` for automated tests. Run all of them locally before pushing changes:

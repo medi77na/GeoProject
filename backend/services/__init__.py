@@ -1,1 +1,1 @@
-
+from .synthetic_data import SyntheticDataResult, generate_synthetic_data
