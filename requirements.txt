@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+numpy
+pandas
+streamlit
+streamlit-folium
+plotly
+ruff
+black
+isort
+pytest
+httpx
