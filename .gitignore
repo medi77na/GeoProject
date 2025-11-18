@@ -1,0 +1,150 @@
+# Python
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+.idea_modules/
+
+# VS Code
+.vscode/
+*.code-workspace
+.history/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# FastAPI / Uvicorn
+*.log
+logs/
+*.pid
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+db.sqlite3
+instance/
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.cache/
+
+# Documentation builds
+docs/_build/
+docs/_static/
+docs/_templates/
+
+# Data files (opcional - descomenta si no quieres versionar datos)
+# data/
+# *.csv
+# *.json
+# *.xlsx
+
+# Frontend Node (si usas React en frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp/
+.pnp.js
+package-lock.json
+yarn.lock
+
+# Frontend builds
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/out/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# API Keys y configuración sensible
+**/config/secrets.yaml
+**/config/local.yaml
+api_keys.txt
+credentials.json
+
+# Archivos de respaldo
+*.bak
+*.backup
+*_backup
+
+# Compilados y optimizaciones
+__pycache__/
+*.pyc
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# Profiling
+*.prof
+
+# Específicos del proyecto
+# Descomenta según necesites
+# synthetic_data/
+# simulation_results/
+# exports/
