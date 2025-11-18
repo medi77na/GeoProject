@@ -37,6 +37,19 @@ See docs/architecture.md for the detailed system design.
 
 If something fails, double-check that the virtual environment is activated, dependencies installed, and you are using Python 3.9 or newer.
 
+## Backend API overview
+
+Available endpoints:
+
+- `GET /health`
+- `GET /api/v1/ping`
+
+Run the backend locally with:
+
+```bash
+uvicorn backend.main:app --reload --port 8000
+```
+
 ## Code quality
 
 We use `ruff` for linting, `black` for formatting, `isort` for import ordering, and `pytest` for automated tests. Run all of them locally before pushing changes:
