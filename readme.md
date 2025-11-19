@@ -124,6 +124,45 @@ print(simulation.traffic["Bello"][:3])
 
 Scenario "B" reduces peak-hour traffic compared to scenario "A", resulting in lower pollution in those intervals.
 
+## KPIs (traffic and pollution)
+
+The module `backend/services/kpi_calculator.py` exposes `compute_kpis(simulation: SimulationResult) -> KPIResult`, which summarizes:
+
+- average traffic per zone (`traffic_index`),
+- average and max pollution per zone (`pollution_avg`, `pollution_max`),
+- congestion index per zone (fraction of time where traffic exceeds a threshold).
+
+These metrics feed the frontend KPI panel for comparing scenarios A and B.
+
+```python
+from backend.services import (
+    KPIResult,
+    SimulationParams,
+    compute_kpis,
+    generate_synthetic_data,
+    run_simulation,
+)
+
+zones = ["Bello", "Medellin", "Envigado", "Itagui"]
+
+synthetic = generate_synthetic_data(
+    zones=zones,
+    horizon=24,
+    scenario="A",
+    traffic_level="medium",
+    seed=123,
+)
+params = SimulationParams()
+sim_result = run_simulation(
+    synthetic_data=synthetic, steps=24, scenario="A", params=params
+)
+kpis = compute_kpis(simulation=sim_result)
+
+print(kpis.traffic_index)
+print(kpis.pollution_avg)
+print(kpis.congestion_index)
+```
+
 ## Code quality
 
 We use `ruff` for linting, `black` for formatting, `isort` for import ordering, and `pytest` for automated tests. Run all of them locally before pushing changes:
