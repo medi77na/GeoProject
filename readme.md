@@ -147,6 +147,10 @@ The Streamlit page also includes a **“Time series of traffic and pollution”*
 
 Each zone is color-coded, and a multiselect lets you pick which ones to display. If no simulation has been run yet, an info message reminds you to execute one before the charts appear.
 
+## Pollution map (Valle de Aburrá)
+
+The frontend now includes a **“Pollution map – Valle de Aburrá”** section rendered with `streamlit-folium` (Leaflet). It centers the map on Valle de Aburrá and draws simple circular markers for the four MVP zones (Bello, Medellin, Envigado, Itagui). Each circle color reflects the average pollution C(t) for that zone over the simulation horizon relative to the maximum zone value (low/medium/high buckets). Popups and tooltips repeat the zone name, average pollution value, and qualitative level so stakeholders can quickly compare conditions. The view automatically refreshes whenever `/api/v1/simulate` updates `st.session_state["simulation_result"]`; if no simulation has been run yet, the UI shows an info callout asking the user to run one before the map appears.
+
 ## KPIs (traffic and pollution)
 
 The module `backend/services/kpi_calculator.py` exposes `compute_kpis(simulation: SimulationResult) -> KPIResult`, which summarizes:
