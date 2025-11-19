@@ -1,6 +1,8 @@
 import os
 from typing import Any, Dict, Optional
 
+import pandas as pd
+import plotly.express as px
 import requests
 import streamlit as st
 
@@ -76,12 +78,88 @@ def main() -> None:
                         f"Horizon: {len(result.get('time', []))}"
                     )
 
-    if st.session_state["simulation_result"]:
-        result = st.session_state["simulation_result"]
+    result = st.session_state.get("simulation_result")
+
+    if result:
         st.subheader("Last simulation summary")
         st.write(f"Scenario: {result.get('scenario')}")
         st.write(f"Zones: {', '.join(result.get('zones', []))}")
         st.write(f"Time steps: {len(result.get('time', []))}")
+
+    st.header("Time series of traffic and pollution")
+
+    if not result:
+        st.info("Run a simulation to display the time series.")
+        return
+
+    scenario = result.get("scenario")
+    zones = result.get("zones", [])
+    time = result.get("time", [])
+    traffic = result.get("traffic", {})
+    pollution = result.get("pollution", {})
+
+    if not scenario or not zones or not time or not traffic or not pollution:
+        st.error("Simulation data is incomplete. Run a new simulation.")
+        return
+
+    selected_zones = st.multiselect(
+        "Zones to display",
+        options=zones,
+        default=zones,
+    )
+
+    if not selected_zones:
+        st.warning("Select at least one zone to display.")
+        return
+
+    rows_traffic = []
+    rows_pollution = []
+
+    for z in selected_zones:
+        series_t = traffic.get(z, [])
+        series_c = pollution.get(z, [])
+        if len(series_t) != len(time) or len(series_c) != len(time):
+            st.error(f"Inconsistent series length for zone {z!r}.")
+            continue
+
+        for t, rho_val, c_val in zip(time, series_t, series_c):
+            rows_traffic.append({"time": t, "zone": z, "traffic": rho_val})
+            rows_pollution.append({"time": t, "zone": z, "pollution": c_val})
+
+    df_traffic = pd.DataFrame(rows_traffic)
+    df_pollution = pd.DataFrame(rows_pollution)
+
+    if df_traffic.empty or df_pollution.empty:
+        st.warning("No data available for the selected zones.")
+        return
+
+    fig_traffic = px.line(
+        df_traffic,
+        x="time",
+        y="traffic",
+        color="zone",
+        markers=True,
+        title=f"Traffic density ρ(t) – scenario {scenario}",
+    )
+    fig_traffic.update_layout(
+        xaxis_title="Time step",
+        yaxis_title="Traffic density ρ(t)",
+    )
+    st.plotly_chart(fig_traffic, use_container_width=True)
+
+    fig_pollution = px.line(
+        df_pollution,
+        x="time",
+        y="pollution",
+        color="zone",
+        markers=True,
+        title=f"Pollution C(t) – scenario {scenario}",
+    )
+    fig_pollution.update_layout(
+        xaxis_title="Time step",
+        yaxis_title="Pollution level C(t)",
+    )
+    st.plotly_chart(fig_pollution, use_container_width=True)
 
 
 if __name__ == "__main__":
