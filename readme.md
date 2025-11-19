@@ -50,6 +50,43 @@ Run the backend locally with:
 uvicorn backend.main:app --reload --port 8000
 ```
 
+## `/api/v1/simulate` endpoint
+
+- **Method & path:** `POST /api/v1/simulate`
+- **Payload fields:**
+  - `scenario`: `"A"` (baseline) or `"B"` (intervention).
+  - `zones`: optional list of zone names. Defaults to Bello, Medellin, Envigado, Itagui.
+  - `horizon`: simulation steps (int > 0).
+  - `traffic_level`: `"low"`, `"medium"`, or `"high"` for the synthetic seed data.
+  - `seed`: optional integer for deterministic synthetic generation.
+  - Optional overrides: `alpha`, `beta`, `inertia`, `dispersion_factor` (tune simulation parameters).
+- **Response:** JSON containing `scenario`, `zones`, `time`, `traffic`, and `pollution`, where `traffic`/`pollution` map each zone to a list over the time horizon.
+
+Example:
+
+```json
+POST /api/v1/simulate
+{
+  "scenario": "B",
+  "zones": ["Bello", "Medellin"],
+  "horizon": 24,
+  "traffic_level": "medium",
+  "seed": 7
+}
+```
+
+```json
+{
+  "scenario": "B",
+  "zones": ["Bello", "Medellin"],
+  "time": [0, 1, 2, "..."],
+  "traffic": {"Bello": [0.4, 0.42, "..."], "Medellin": [...]},
+  "pollution": {"Bello": [11.2, 11.8, "..."], "Medellin": [...]}
+}
+```
+
+Scenario "B" reduces peak-hour traffic relative to "A", so the returned traffic/pollution curves will typically be lower during morning and evening peaks.
+
 ## Synthetic data generator
 
 The module `backend/services/synthetic_data.py` provides `generate_synthetic_data(...)`, which returns a `SyntheticDataResult` containing time, traffic (rho), and pollution (C) series for each zone. Use it internally to mock scenarios before the real simulator is ready:

@@ -1,204 +1,194 @@
 You are working inside the local repository of the "Urban Simulator" project.
 
-Goal: implement a simple discrete-time simulation engine for traffic and pollution, using the existing synthetic data generator, plus tests and minimal docs.
+Goal: expose a `/api/v1/simulate` endpoint in FastAPI that orchestrates the synthetic data generator and the simulation engine, with typed request/response models, tests, and minimal docs.
 
 Constraints:
-- Only touch backend service modules, backend tests, and README.md.
-- Do NOT add any HTTP endpoints.
-- Keep the model simple, deterministic (no random calls here), and easy to understand.
+- Only modify backend code (models, api, tests) and README.md.
+- Do NOT change the existing health endpoint or CI configuration.
+- Keep the JSON shape simple and stable for a Phase 1 frontend.
 
 Tasks:
 
-1) Create or overwrite `backend/services/simulation_engine.py` with this content:
+1) Create `backend/models/simulation.py` with:
 
-from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
-from .synthetic_data import SyntheticDataResult
-
-
-@dataclass
-class SimulationParams:
-    alpha: float = 0.6          # emission factor: how strongly traffic increases pollution
-    beta: float = 0.3           # dispersion factor: how strongly pollution decays
-    inertia: float = 0.5        # how much the previous traffic state influences the new one
-    dispersion_factor: float = 1.0  # base dispersion term in pollution update
+from pydantic import BaseModel, Field
 
 
-@dataclass
-class SimulationResult:
+class SimulationRequest(BaseModel):
+    scenario: Literal["A", "B"] = "A"
+    zones: Optional[List[str]] = None
+    horizon: int = Field(24, gt=0)
+    traffic_level: Literal["low", "medium", "high"] = "medium"
+    seed: Optional[int] = None
+
+    # Optional overrides for SimulationParams
+    alpha: Optional[float] = None
+    beta: Optional[float] = None
+    inertia: Optional[float] = None
+    dispersion_factor: Optional[float] = None
+
+
+class SimulationResponse(BaseModel):
+    scenario: str
+    zones: List[str]
     time: List[int]
     traffic: Dict[str, List[float]]
     pollution: Dict[str, List[float]]
-    scenario: str
 
+2) Update `backend/models/__init__.py` to export the new models, without removing anything that is already there:
 
-def run_simulation(
-    synthetic_data: SyntheticDataResult,
-    steps: Optional[int] = None,
-    scenario: str = "A",
-    params: Optional[SimulationParams] = None,
-) -> SimulationResult:
-    """
-    Run a simple discrete-time simulation of traffic and pollution per zone.
+from .simulation import SimulationRequest, SimulationResponse
 
-    Args:
-        synthetic_data: base synthetic series (rho and C) per zone.
-        steps: number of simulation steps. If None, uses len(synthetic_data.time).
-        scenario: "A" for baseline, "B" for an intervention with reduced traffic in peak hours.
-        params: simulation parameters; default values are reasonable for Phase 1.
+3) Update `backend/api/router.py`:
 
-    Returns:
-        SimulationResult with time, simulated traffic and pollution, and scenario label.
-    """
-    if scenario not in {"A", "B"}:
-        raise ValueError('scenario must be "A" or "B"')
+- Import the new models and services at the top:
 
-    if params is None:
-        params = SimulationParams()
+from fastapi import APIRouter, HTTPException
 
-    if steps is None:
-        steps = len(synthetic_data.time)
-
-    if steps <= 0:
-        raise ValueError("steps must be positive")
-
-    time = list(range(steps))
-    sim_traffic: Dict[str, List[float]] = {}
-    sim_pollution: Dict[str, List[float]] = {}
-
-    for zone, base_traffic_series in synthetic_data.traffic.items():
-        if zone not in synthetic_data.pollution:
-            raise ValueError(f"Zone {zone!r} missing in pollution series")
-
-        base_pollution_series = synthetic_data.pollution[zone]
-        if len(base_traffic_series) == 0 or len(base_pollution_series) == 0:
-            raise ValueError(f"Empty series for zone {zone!r}")
-
-        rho_prev = float(base_traffic_series[0])
-        c_prev = float(base_pollution_series[0])
-
-        zone_traffic: List[float] = []
-        zone_pollution: List[float] = []
-
-        for t in time:
-            base_idx = min(t, len(base_traffic_series) - 1)
-            base_rho = float(base_traffic_series[base_idx])
-
-            # Scenario B reduces traffic during typical peak hours.
-            if scenario == "B" and (6 <= t <= 9 or 17 <= t <= 20):
-                base_rho *= 0.8
-
-            # Discrete update for traffic: mix previous state and base value.
-            rho_t = (1.0 - params.inertia) * base_rho + params.inertia * rho_prev
-            rho_t = max(0.0, min(1.0, rho_t))
-
-            # Discrete update for pollution.
-            c_t = c_prev + params.alpha * rho_t - params.beta * params.dispersion_factor
-            c_t = max(0.0, c_t)
-
-            zone_traffic.append(float(rho_t))
-            zone_pollution.append(float(c_t))
-
-            rho_prev = rho_t
-            c_prev = c_t
-
-        sim_traffic[zone] = zone_traffic
-        sim_pollution[zone] = zone_pollution
-
-    return SimulationResult(time=time, traffic=sim_traffic, pollution=sim_pollution, scenario=scenario)
-
-2) Update `backend/services/__init__.py` so that it also exposes the simulation engine API:
-   - Keep the existing imports.
-   - Add:
-
-from .simulation_engine import SimulationParams, SimulationResult, run_simulation
-
-3) Create a new test module `backend/tests/test_simulation_engine.py` with the following tests:
-
-from statistics import mean
-
+from backend.models import SimulationRequest, SimulationResponse
 from backend.services import (
     SimulationParams,
     generate_synthetic_data,
     run_simulation,
 )
 
+- Keep the existing router definition with prefix `/api/v1` and the `/ping` endpoint.
+- Add a list of default zones:
 
-ZONES = ["Bello", "Medellin"]
+DEFAULT_ZONES = ["Bello", "Medellin", "Envigado", "Itagui"]
 
+- Add a new route:
 
-def _base_synthetic():
-    return generate_synthetic_data(
-        zones=ZONES,
-        horizon=24,
-        scenario="A",
-        traffic_level="medium",
-        seed=42,
+@router.post("/simulate", response_model=SimulationResponse)
+def simulate(request: SimulationRequest) -> SimulationResponse:
+    try:
+        zones = request.zones or DEFAULT_ZONES
+
+        synthetic = generate_synthetic_data(
+            zones=zones,
+            horizon=request.horizon,
+            scenario=request.scenario,
+            traffic_level=request.traffic_level,
+            seed=request.seed,
+        )
+
+        base_params = SimulationParams()
+        params = SimulationParams(
+            alpha=request.alpha if request.alpha is not None else base_params.alpha,
+            beta=request.beta if request.beta is not None else base_params.beta,
+            inertia=(
+                request.inertia
+                if request.inertia is not None
+                else base_params.inertia
+            ),
+            dispersion_factor=(
+                request.dispersion_factor
+                if request.dispersion_factor is not None
+                else base_params.dispersion_factor
+            ),
+        )
+
+        result = run_simulation(
+            synthetic_data=synthetic,
+            steps=request.horizon,
+            scenario=request.scenario,
+            params=params,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return SimulationResponse(
+        scenario=result.scenario,
+        zones=list(result.traffic.keys()),
+        time=result.time,
+        traffic=result.traffic,
+        pollution=result.pollution,
     )
 
+4) Create a new test module `backend/tests/test_simulate_endpoint.py` with the following tests:
 
-def test_simulation_shapes():
-    synthetic = _base_synthetic()
-    steps = 24
+from statistics import mean
 
-    result = run_simulation(synthetic_data=synthetic, steps=steps, scenario="A")
+from fastapi.testclient import TestClient
 
-    assert len(result.time) == steps
-    for zone in ZONES:
-        assert len(result.traffic[zone]) == steps
-        assert len(result.pollution[zone]) == steps
+from backend.main import app
+
+client = TestClient(app)
 
 
-def test_simulation_is_deterministic():
-    synthetic = _base_synthetic()
-    params = SimulationParams(alpha=0.7, beta=0.3, inertia=0.4)
+def test_simulate_default_ok():
+    response = client.post("/api/v1/simulate", json={"scenario": "A"})
+    assert response.status_code == 200
 
-    r1 = run_simulation(synthetic, steps=24, scenario="A", params=params)
-    r2 = run_simulation(synthetic, steps=24, scenario="A", params=params)
+    data = response.json()
+    assert data["scenario"] == "A"
 
-    assert r1.time == r2.time
-    assert r1.traffic == r2.traffic
-    assert r1.pollution == r2.pollution
+    zones = data["zones"]
+    assert isinstance(zones, list)
+    assert len(zones) > 0
+
+    time = data["time"]
+    assert isinstance(time, list)
+    assert len(time) > 0
+
+    traffic = data["traffic"]
+    pollution = data["pollution"]
+
+    for z in zones:
+        assert z in traffic
+        assert z in pollution
+        assert len(traffic[z]) == len(time)
+        assert len(pollution[z]) == len(time)
 
 
-def test_higher_alpha_increases_pollution():
-    synthetic = _base_synthetic()
+def test_simulate_invalid_horizon():
+    response = client.post(
+        "/api/v1/simulate",
+        json={"scenario": "A", "horizon": 0},
+    )
+    assert response.status_code in (400, 422)
 
-    low_alpha = SimulationParams(alpha=0.2, beta=0.3)
-    high_alpha = SimulationParams(alpha=1.0, beta=0.3)
 
-    sim_low = run_simulation(synthetic, steps=24, scenario="A", params=low_alpha)
-    sim_high = run_simulation(synthetic, steps=24, scenario="A", params=high_alpha)
+def test_simulate_scenario_a_vs_b_differs():
+    payload_common = {
+        "zones": ["Bello", "Medellin"],
+        "horizon": 24,
+        "traffic_level": "medium",
+        "seed": 123,
+    }
+
+    resp_a = client.post(
+        "/api/v1/simulate",
+        json={**payload_common, "scenario": "A"},
+    )
+    resp_b = client.post(
+        "/api/v1/simulate",
+        json={**payload_common, "scenario": "B"},
+    )
+
+    assert resp_a.status_code == 200
+    assert resp_b.status_code == 200
+
+    data_a = resp_a.json()
+    data_b = resp_b.json()
 
     zone = "Medellin"
-    avg_low = mean(sim_low.pollution[zone])
-    avg_high = mean(sim_high.pollution[zone])
+    avg_a = mean(data_a["traffic"][zone])
+    avg_b = mean(data_b["traffic"][zone])
 
-    assert avg_high > avg_low
-
-
-def test_scenario_a_vs_b_differs():
-    synthetic = _base_synthetic()
-    params = SimulationParams()
-
-    sim_a = run_simulation(synthetic, steps=24, scenario="A", params=params)
-    sim_b = run_simulation(synthetic, steps=24, scenario="B", params=params)
-
-    zone = "Medellin"
-    avg_a = mean(sim_a.traffic[zone])
-    avg_b = mean(sim_b.traffic[zone])
-
-    # In scenario B, peak-hour traffic should be lower on average.
     assert avg_b < avg_a
 
-4) Update `README.md`:
-   - Add a short section "Simulation engine" explaining:
-     - that `backend/services/simulation_engine.py` implements `SimulationParams`, `SimulationResult` and `run_simulation(...)`,
-     - that it takes `SyntheticDataResult` as input and produces simulated series per zone,
-     - a minimal usage example (similar to the one in the design above),
-     - that scenario "B" reduces peak-hour traffic compared to "A".
+5) Update `README.md`:
 
-5) Do NOT modify CI config or any FastAPI endpoints.
+- Add a section " `/api/v1/simulate` endpoint" describing:
+  - method and path,
+  - input parameters (scenario, zones, horizon, traffic_level, seed, optional params),
+  - the general JSON response structure (scenario, zones, time, traffic, pollution),
+  - a minimal request/response example (you can paraphrase the description given in the design above).
+
+6) Do NOT modify CI configuration or other endpoints.
 
 At the end, print a short summary of which files were created or updated, without staging or committing anything.
