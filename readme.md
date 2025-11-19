@@ -138,6 +138,15 @@ Run it locally with:
 streamlit run frontend/app.py --server.port 8501
 ```
 
+## Time series visualization
+
+The Streamlit page also includes a **“Time series of traffic and pollution”** section. It reads the latest simulation stored in `st.session_state["simulation_result"]` (populated when `/api/v1/simulate` is called) and renders two Plotly line charts:
+
+- Traffic density ρ(t) per zone.
+- Pollution level C(t) per zone.
+
+Each zone is color-coded, and a multiselect lets you pick which ones to display. If no simulation has been run yet, an info message reminds you to execute one before the charts appear.
+
 ## KPIs (traffic and pollution)
 
 The module `backend/services/kpi_calculator.py` exposes `compute_kpis(simulation: SimulationResult) -> KPIResult`, which summarizes:
