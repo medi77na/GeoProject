@@ -12,3 +12,4 @@ black
 isort
 pytest
 httpx
+requests

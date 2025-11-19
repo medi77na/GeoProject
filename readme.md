@@ -124,6 +124,20 @@ print(simulation.traffic["Bello"][:3])
 
 Scenario "B" reduces peak-hour traffic compared to scenario "A", resulting in lower pollution in those intervals.
 
+## Frontend – scenario selection UI
+
+`frontend/app.py` contains the Streamlit interface for selecting scenarios and simulation parameters. It lets you:
+
+- Choose scenario A or B.
+- Configure the horizon, traffic level, dispersion factor, and an optional seed.
+- Trigger the `POST /api/v1/simulate` call and stores the JSON response in `st.session_state["simulation_result"]` for later views (time series, maps, KPIs).
+
+Run it locally with:
+
+```bash
+streamlit run frontend/app.py --server.port 8501
+```
+
 ## KPIs (traffic and pollution)
 
 The module `backend/services/kpi_calculator.py` exposes `compute_kpis(simulation: SimulationResult) -> KPIResult`, which summarizes:
