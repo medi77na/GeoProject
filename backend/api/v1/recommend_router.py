@@ -113,8 +113,8 @@ RECOMMEND_RESPONSE_EXAMPLE = {
     },
 )
 async def recommend_policies(
-    payload: RecommendationRequest = Body(..., examples=RECOMMEND_REQUEST_EXAMPLES),
     fastapi_request: Request,
+    payload: RecommendationRequest = Body(..., examples=RECOMMEND_REQUEST_EXAMPLES),
 ) -> RecommendationResponse:
     start = time.perf_counter()
     endpoint_name = "/api/v1/recommend"

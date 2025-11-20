@@ -8,9 +8,11 @@ import { PointsLayer } from "./points_layer";
 import { ZonesLayer } from "./zones_layer";
 import { attachMetricsToGeoJson, computeLatestMetricsFromSimulation, deriveLegendData } from "./utils_geo";
 import { useZonesGeoJson } from "./use_zones_geojson";
+import { UI_TEXTS_ES } from "../constants/texts_es";
 
 export const VALLE_CENTER = [6.24, -75.58];
 export const DEFAULT_ZOOM = 11;
+const T = UI_TEXTS_ES;
 
 export function Legend({ items }) {
     if (!items || items.length === 0) return null;
@@ -29,11 +31,11 @@ export function Legend({ items }) {
                 color: "#0f172a",
                 border: "1px solid #e2e8f0",
             }}
-            aria-label="Air quality legend"
+            aria-label={T.legend.ariaLabel}
         >
-            <div style={{ fontWeight: 800, marginBottom: "2px" }}>Air quality scale</div>
+            <div style={{ fontWeight: 800, marginBottom: "2px" }}>{T.legend.title}</div>
             <div style={{ color: "#475569", fontSize: "0.9rem", marginBottom: "8px" }}>
-                Shared palette for zones, monitoring points, and the heatmap.
+                {T.legend.subtitle}
             </div>
             {items.map((item) => (
                 <div
@@ -101,26 +103,26 @@ export function LayerToggles({
                 border: "1px solid #e2e8f0",
             }}
         >
-            <div style={{ fontWeight: 800, marginBottom: "6px" }}>Layers</div>
+            <div style={{ fontWeight: 800, marginBottom: "6px" }}>{T.legend.layersTitle}</div>
             <div style={{ color: "#475569", marginBottom: "8px", fontSize: "0.9rem" }}>
-                Toggle the overlays to focus on the data you need.
+                {T.legend.layersDescription}
             </div>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "2px 0" }} title="Colored polygons showing the latest pollution and traffic metrics per sector.">
-                <input type="checkbox" checked={showZonesLayer} onChange={onToggleZones} aria-label="Show sectors layer" />
-                Zones (sectors)
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "2px 0" }} title={T.legend.zonesTooltip}>
+                <input type="checkbox" checked={showZonesLayer} onChange={onToggleZones} aria-label={T.legend.zones} />
+                {T.legend.zones}
             </label>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "2px 0" }} title="Monitoring points and sensors; size tracks PM2.5 at the last time step.">
-                <input type="checkbox" checked={showPointsLayer} onChange={onTogglePoints} aria-label="Show monitoring points layer" />
-                Points (sensors)
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "2px 0" }} title={T.legend.pointsTooltip}>
+                <input type="checkbox" checked={showPointsLayer} onChange={onTogglePoints} aria-label={T.legend.points} />
+                {T.legend.points}
             </label>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "2px 0" }} title="Heatmap to spot hot areas across the valley.">
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "2px 0" }} title={T.legend.heatmapTooltip}>
                 <input
                     type="checkbox"
                     checked={showHeatmapLayer}
                     onChange={onToggleHeatmap}
-                    aria-label="Show heatmap layer"
+                    aria-label={T.legend.heatmap}
                 />
-                Heatmap
+                {T.legend.heatmap}
             </label>
         </div>
     );
@@ -175,15 +177,15 @@ function UrbanMap({
     const hasSimulationResult = Boolean(simulationResult);
 
     if (error) {
-        return <MapStatus message={`Advanced map unavailable: ${error}`} />;
+        return <MapStatus message={`${T.messages.mapUnavailablePrefix}${error}`} />;
     }
 
     return (
         <div style={{ position: "relative" }}>
             {!hasSimulationResult && (
-                <MapStatus message="Run a simulation to display the advanced layers." />
+                <MapStatus message={T.map.statusNeedsSimulation} />
             )}
-            {loading && <MapStatus message="Loading zones for the map..." />}
+            {loading && <MapStatus message={T.messages.loadingZones} />}
             <MapContainer
                 center={VALLE_CENTER}
                 zoom={DEFAULT_ZOOM}

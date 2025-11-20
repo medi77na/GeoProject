@@ -21,11 +21,13 @@ import {
     deriveLegendData,
 } from "./utils_geo";
 import { useZonesGeoJson } from "./use_zones_geojson";
+import { UI_TEXTS_ES } from "../constants/texts_es";
 
 const BADGE_COLORS = {
     A: "#1d4ed8",
     B: "#b91c1c",
 };
+const T = UI_TEXTS_ES;
 
 function ScenarioBadge({ label, variant }) {
     return (
@@ -319,8 +321,8 @@ function OverlayMap({
 function ComparisonView({
     resultA,
     resultB,
-    labelA = "Scenario A",
-    labelB = "Scenario B",
+    labelA = T.options.scenarios.labelA,
+    labelB = T.options.scenarios.labelB,
     mode = "side-by-side",
     tileLayer,
     height = 520,
@@ -370,18 +372,18 @@ function ComparisonView({
     const hasComparisonData = Boolean(resultA && resultB);
 
     if (error) {
-        return <MapStatus message={`Comparison map unavailable: ${error}`} />;
+        return <MapStatus message={`${T.messages.comparisonMapUnavailablePrefix}${error}`} />;
     }
 
     if (!hasComparisonData) {
         return (
-            <MapStatus message="Configure scenarios A and B, then run a comparison to see the maps." />
+            <MapStatus message={T.sections.comparison.mapNotReady} />
         );
     }
 
     return (
         <div style={{ position: "relative" }}>
-            {loading && <MapStatus message="Loading base zones for comparison..." />}
+            {loading && <MapStatus message={T.sections.comparison.loadingBase} />}
             <LayerToggles
                 showZonesLayer={showZonesLayer}
                 showPointsLayer={showPointsLayer}

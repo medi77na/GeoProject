@@ -10,6 +10,9 @@ import {
 
 import { getZoneStyle } from "./zone_styles";
 import { featureCentroid } from "./utils_geo";
+import { UI_TEXTS_ES } from "../constants/texts_es";
+
+const T = UI_TEXTS_ES;
 
 export const DEFAULT_TILE_LAYER = {
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -27,26 +30,26 @@ export function ZoneLayer({ geojson, metrics }) {
 
     const handleEachFeature = (feature, layer) => {
         const props = feature.properties ?? {};
-        const name = props.name ?? "Zone";
+        const name = props.name ?? T.map.zoneFallback;
 
         const pollution = props.pollution;
         const traffic = props.traffic;
 
         const pollutionLabel = typeof pollution === "number"
             ? `${pollution.toFixed(1)} μg/m³`
-            : "n/a";
+            : T.sections.kpis.notAvailable;
         const trafficLabel = typeof traffic === "number"
-            ? `${traffic.toFixed(2)} (rel.)`
-            : "n/a";
+            ? `${traffic.toFixed(2)} ${T.metrics.relative}`
+            : T.sections.kpis.notAvailable;
 
         const content = `
             <div>
                 <strong>${name}</strong><br/>
-                PM2.5: ${pollutionLabel}<br/>
-                Traffic: ${trafficLabel}
+                ${T.metrics.pm}: ${pollutionLabel}<br/>
+                ${T.metrics.traffic}: ${trafficLabel}
             </div>
         `;
-        layer.bindTooltip(`${name} • PM2.5: ${pollutionLabel} • Traffic: ${trafficLabel}`);
+        layer.bindTooltip(`${name} • ${T.metrics.pm}: ${pollutionLabel} • ${T.metrics.traffic}: ${trafficLabel}`);
         layer.bindPopup(content);
     };
 
@@ -64,8 +67,10 @@ export function TrafficMarkers({ features, trafficByZone }) {
 
     const entries = features
         .map((feature) => {
-            const name = feature.properties?.name;
-            if (!name) return null;
+            const name = feature.properties?.name ?? T.map.zoneFallback;
+            if (!name) {
+                return null;
+            }
             const trafficValue = trafficByZone[name];
             const centroid = feature.properties?.centroid ?? featureCentroid(feature);
             if (!centroid) return null;
@@ -96,20 +101,20 @@ export function TrafficMarkers({ features, trafficByZone }) {
                     }}
                 >
                     <Tooltip direction="top" offset={[0, -5]} opacity={0.9}>
-                        {`${entry.name} • Traffic: ${
+                        {`${entry.name} • ${T.metrics.traffic}: ${
                             typeof entry.value === "number"
                                 ? entry.value.toFixed(2)
-                                : "n/a"
+                                : T.sections.kpis.notAvailable
                         }`}
                     </Tooltip>
                     <Popup>
                         <div>
                             <strong>{entry.name}</strong>
                             <div>
-                                Traffic level:{" "}
+                                {`${T.sections.kpis.trafficLabel}: `}
                                 {typeof entry.value === "number"
                                     ? entry.value.toFixed(2)
-                                    : "n/a"}
+                                    : T.sections.kpis.notAvailable}
                             </div>
                         </div>
                     </Popup>

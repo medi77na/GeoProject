@@ -3,12 +3,15 @@ import React, { useMemo, useState } from "react";
 import ComparisonView from "../map/comparison_view";
 import UrbanMap from "../map";
 import RecommendationsPanel from "../components/RecommendationsPanel";
+import { UI_TEXTS_ES } from "../constants/texts_es";
 import {
     fetchRecommendations,
     fetchSimulation,
     fetchSimulationComparison,
 } from "../services/api_client";
 import { buildRecommendationRequest } from "./recommendationMapper";
+
+const T = UI_TEXTS_ES;
 
 const DEFAULT_SIM_PAYLOAD = {
     scenario: "B",
@@ -18,7 +21,7 @@ const DEFAULT_SIM_PAYLOAD = {
 };
 
 const DEFAULT_SCENARIO_A = {
-    label: "Scenario A (baseline)",
+    label: T.options.scenarios.defaultLabelA,
     scenario: "A",
     traffic_level: "medium",
     horizon: DEFAULT_SIM_PAYLOAD.horizon,
@@ -27,7 +30,7 @@ const DEFAULT_SCENARIO_A = {
 };
 
 const DEFAULT_SCENARIO_B = {
-    label: "Scenario B (policy)",
+    label: T.options.scenarios.defaultLabelB,
     scenario: "B",
     traffic_level: "medium",
     horizon: DEFAULT_SIM_PAYLOAD.horizon,
@@ -62,23 +65,23 @@ function ScenarioConfigForm({ title, config, onChange }) {
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                     <FieldLabel
-                        label="Legend label"
-                        hint="Displayed in the comparison legend."
+                        label={T.form.legendLabel}
+                        hint={T.form.legendHint}
                         htmlFor={`${title}-label`}
-                        tooltip="Name each scenario so the comparison legend is clear."
+                        tooltip={T.form.legendTooltip}
                     />
                     <input
                         id={`${title}-label`}
                         type="text"
                         value={config.label}
                         onChange={(event) => onChange({ ...config, label: event.target.value })}
-                        placeholder="Baseline / Mitigation"
+                        placeholder={T.form.legendPlaceholder}
                         style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "0.95rem" }}
                     />
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "10px", alignItems: "end" }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        <FieldLabel label="Scenario" htmlFor={`${title}-scenario`} tooltip="Scenario A (baseline) vs Scenario B (intervention)" />
+                        <FieldLabel label={T.form.scenario} htmlFor={`${title}-scenario`} tooltip={T.form.scenarioTooltip} />
                         <select
                             id={`${title}-scenario`}
                             value={config.scenario}
@@ -90,20 +93,20 @@ function ScenarioConfigForm({ title, config, onChange }) {
                         </select>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        <FieldLabel label="Traffic level" htmlFor={`${title}-traffic`} tooltip="Higher traffic increases baseline congestion." />
+                        <FieldLabel label={T.form.trafficLevel} htmlFor={`${title}-traffic`} tooltip={T.form.trafficTooltip} />
                         <select
                             id={`${title}-traffic`}
                             value={config.traffic_level}
                             onChange={(event) => onChange({ ...config, traffic_level: event.target.value })}
                             style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "0.95rem" }}
                         >
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
+                            <option value="low">{T.options.traffic.low}</option>
+                            <option value="medium">{T.options.traffic.medium}</option>
+                            <option value="high">{T.options.traffic.high}</option>
                         </select>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        <FieldLabel label="Horizon" htmlFor={`${title}-horizon`} hint="Time steps" tooltip="Minimum 1. Higher values increase runtime." />
+                        <FieldLabel label={T.form.horizon} htmlFor={`${title}-horizon`} hint={T.form.horizonHint} tooltip={T.form.horizonTooltip} />
                         <input
                             id={`${title}-horizon`}
                             type="number"
@@ -115,15 +118,15 @@ function ScenarioConfigForm({ title, config, onChange }) {
                     </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    <label style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "0.95rem", color: "#0f172a" }} title="Toggle peak-hour restrictions for private vehicles.">
+                    <label style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "0.95rem", color: "#0f172a" }} title={T.form.picoYPlacaTooltip}>
                         <input
                             type="checkbox"
                             checked={config.pico_placa_enabled}
                             onChange={(event) => onChange({ ...config, pico_placa_enabled: event.target.checked })}
                         />
-                        Pico y placa enabled
+                        {T.form.picoYPlaca}
                     </label>
-                    <label style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "0.95rem", color: "#0f172a" }} title="Restrict heavy-duty cargo circulation during the horizon.">
+                    <label style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "0.95rem", color: "#0f172a" }} title={T.form.cargoRestrictionTooltip}>
                         <input
                             type="checkbox"
                             checked={config.cargo_restriction_enabled}
@@ -132,9 +135,9 @@ function ScenarioConfigForm({ title, config, onChange }) {
                                 cargo_restriction_enabled: event.target.checked,
                             })}
                         />
-                        Cargo restriction enabled
+                        {T.form.cargoRestriction}
                     </label>
-                    <div style={{ color: "#475569", fontSize: "0.9rem" }}>Advanced policy toggles are optional and only affect the A/B comparison payload.</div>
+                    <div style={{ color: "#475569", fontSize: "0.9rem" }}>{T.form.advancedNote}</div>
                 </div>
             </div>
         </div>
@@ -185,7 +188,7 @@ function SectionCard({ step, title, subtitle, children }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", flexWrap: "wrap" }}>
                 <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "0.95rem", color: "#2563eb", fontWeight: 700 }}>
-                        {step ? `Section ${step}` : "Section"}
+                        {step ? `${T.sections.sectionLabel} ${step}` : T.sections.sectionLabel}
                         <span style={{ display: "inline-block", height: "12px", width: "1px", background: "#cbd5e1" }} />
                         <span style={{ color: "#0f172a" }}>{title}</span>
                     </div>
@@ -211,7 +214,7 @@ function KpiPanel({ simulationResult, pollutionByZone, trafficByZone }) {
         return (
             <InlineAlert
                 tone="muted"
-                message="No results yet. Run the simulation to populate KPIs for each sector."
+                message={T.sections.kpis.noResults}
             />
         );
     }
@@ -221,25 +224,28 @@ function KpiPanel({ simulationResult, pollutionByZone, trafficByZone }) {
         return (
             <InlineAlert
                 tone="warning"
-                title="Missing zones"
-                message="The backend did not return any zones for this run."
+                title={T.sections.kpis.missingZonesTitle}
+                message={T.sections.kpis.missingZonesMessage}
             />
         );
     }
 
     const horizon = simulationResult.time?.length ?? 0;
-    const scenarioLabel = simulationResult.scenario ? `Scenario ${simulationResult.scenario}` : "Scenario";
+    const scenarioLabel = simulationResult.scenario
+        ? `${T.sections.kpis.scenarioLabel} ${simulationResult.scenario}`
+        : T.sections.kpis.scenarioLabel;
+    const trafficLevelLabel = T.options.traffic[simulationResult.traffic_level] ?? simulationResult.traffic_level ?? T.sections.kpis.notAvailable;
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                 <div style={{ padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: "10px", background: "#f8fafc", color: "#0f172a", minWidth: "180px" }}>
                     <div style={{ fontWeight: 700 }}>{scenarioLabel}</div>
-                    <div style={{ color: "#475569", fontSize: "0.95rem" }}>Horizon: {horizon} steps</div>
+                    <div style={{ color: "#475569", fontSize: "0.95rem" }}>{`${T.sections.kpis.horizonLabel}: ${horizon} ${T.sections.kpis.horizonSteps}`}</div>
                 </div>
                 <div style={{ padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: "10px", background: "#f8fafc", color: "#0f172a", minWidth: "180px" }}>
-                    <div style={{ fontWeight: 700 }}>Traffic level</div>
-                    <div style={{ color: "#475569", fontSize: "0.95rem" }}>{simulationResult.traffic_level ?? "n/a"}</div>
+                    <div style={{ fontWeight: 700 }}>{T.sections.kpis.trafficLabel}</div>
+                    <div style={{ color: "#475569", fontSize: "0.95rem" }}>{trafficLevelLabel}</div>
                 </div>
             </div>
             <div
@@ -264,12 +270,12 @@ function KpiPanel({ simulationResult, pollutionByZone, trafficByZone }) {
                         >
                             <div style={{ fontWeight: 700, color: "#0f172a", marginBottom: "6px" }}>{zone}</div>
                             <div style={{ color: "#475569", fontSize: "0.95rem" }}>
-                                PM2.5 (last step):{" "}
-                                <strong>{Number.isFinite(pollution) ? `${pollution.toFixed(1)} μg/m³` : "n/a"}</strong>
+                                {T.sections.kpis.pollutionLatest}{" "}
+                                <strong>{Number.isFinite(pollution) ? `${pollution.toFixed(1)} μg/m³` : T.sections.kpis.notAvailable}</strong>
                             </div>
                             <div style={{ color: "#475569", fontSize: "0.95rem", marginTop: "4px" }}>
-                                Traffic (rel.):{" "}
-                                <strong>{Number.isFinite(traffic) ? traffic.toFixed(2) : "n/a"}</strong>
+                                {T.sections.kpis.trafficRelative}{" "}
+                                <strong>{Number.isFinite(traffic) ? traffic.toFixed(2) : T.sections.kpis.notAvailable}</strong>
                             </div>
                         </div>
                     );
@@ -298,6 +304,7 @@ function SimulationDashboard({ backendUrl = "" }) {
     const [recommendationError, setRecommendationError] = useState(null);
     const [useLlm, setUseLlm] = useState(false);
     const [autoRecommend, setAutoRecommend] = useState(false);
+    const [activeView, setActiveView] = useState("single");
 
     const resolveHorizon = (value) => {
         const numeric = Number(value ?? DEFAULT_SIM_PAYLOAD.horizon);
@@ -347,14 +354,14 @@ function SimulationDashboard({ backendUrl = "" }) {
         const sourceResult = resultOverride ?? simulationResult;
         if (!sourceResult) {
             setRecommendationStatus("idle");
-            setRecommendationError("Run a simulation first to generate recommendations.");
+            setRecommendationError(T.messages.runFirstForRecommendation);
             return;
         }
 
         const payload = buildRecommendationRequest(sourceResult, useLlm);
         if (!payload) {
             setRecommendationStatus("idle");
-            setRecommendationError("Simulation data is incomplete for recommendations.");
+            setRecommendationError(T.messages.incompleteForRecommendation);
             return;
         }
 
@@ -367,7 +374,7 @@ function SimulationDashboard({ backendUrl = "" }) {
             setRecommendationStatus(hasActions ? "ready" : "empty");
         } catch (err) {
             setRecommendationStatus("error");
-            setRecommendationError(err.message || "Failed to generate recommendations.");
+            setRecommendationError(err.message || T.recommendations.statuses.errorGeneric);
         }
     };
 
@@ -376,7 +383,7 @@ function SimulationDashboard({ backendUrl = "" }) {
         if (!Number.isFinite(horizonValue) || horizonValue < 1) {
             setSimulationResult(null);
             resetRecommendationState();
-            setError("Please provide a horizon of at least 1 time step to run the simulation.");
+            setError(T.messages.horizonInvalid);
             return;
         }
 
@@ -399,7 +406,7 @@ function SimulationDashboard({ backendUrl = "" }) {
                 await generateRecommendation(data);
             }
         } catch (err) {
-            setError(err.message || "Simulation failed. Please retry.");
+            setError(err.message || T.messages.simulationFailed);
             setSimulationResult(null);
             resetRecommendationState();
         } finally {
@@ -423,33 +430,33 @@ function SimulationDashboard({ backendUrl = "" }) {
             setComparisonResult(data);
             setActiveView("comparison");
         } catch (err) {
-            setComparisonError(err.message || "Comparison failed. Please retry.");
+            setComparisonError(err.message || T.messages.comparisonFailed);
             setComparisonResult(null);
         } finally {
             setComparisonLoading(false);
         }
     };
 
-    const resolvedLabelA = comparisonResult?.label_a || scenarioA.label || "Scenario A";
-    const resolvedLabelB = comparisonResult?.label_b || scenarioB.label || "Scenario B";
+    const resolvedLabelA = comparisonResult?.label_a || scenarioA.label || T.options.scenarios.labelA;
+    const resolvedLabelB = comparisonResult?.label_b || scenarioB.label || T.options.scenarios.labelB;
 
     return (
         <div className="simulation-dashboard" style={{ display: "flex", flexDirection: "column", gap: "16px", fontSize: "14px" }}>
             <header style={{ marginBottom: "4px" }}>
-                <h1 style={{ margin: 0 }}>Urban Simulator – Phase 2 Dashboard</h1>
+                <h1 style={{ margin: 0 }}>{T.app.title}</h1>
                 <p style={{ margin: "6px 0 0 0", color: "#4b5563", fontSize: "0.98rem" }}>
-                    Follow the ordered steps to configure parameters, run scenario A, explore the map layers, compare A/B, and request recommendations.
+                    {T.app.intro}
                 </p>
             </header>
 
             <SectionCard
                 step="1"
-                title="Simulation parameters"
-                subtitle="Set scenario A inputs before sending them to the /api/v1/simulate endpoint."
+                title={T.sections.simulationParams.title}
+                subtitle={T.sections.simulationParams.subtitle}
             >
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        <FieldLabel label="Scenario" htmlFor="single-scenario" tooltip="Choose A for baseline or B for intervention." />
+                        <FieldLabel label={T.form.scenario} htmlFor="single-scenario" tooltip={T.form.scenarioTooltip} />
                         <select
                             id="single-scenario"
                             value={singleScenario}
@@ -462,10 +469,10 @@ function SimulationDashboard({ backendUrl = "" }) {
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                         <FieldLabel
-                            label="Traffic level"
+                            label={T.form.trafficLevel}
                             htmlFor="single-traffic"
-                            hint="Advanced: baseline congestion level."
-                            tooltip="Adjusts starting congestion across the network."
+                            hint={T.form.trafficTooltip}
+                            tooltip={T.form.trafficTooltip}
                         />
                         <select
                             id="single-traffic"
@@ -473,17 +480,17 @@ function SimulationDashboard({ backendUrl = "" }) {
                             onChange={(event) => setSingleTrafficLevel(event.target.value)}
                             style={{ padding: "10px 12px", borderRadius: "10px", border: "1px solid #e5e7eb", fontSize: "0.95rem" }}
                         >
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
+                            <option value="low">{T.options.traffic.low}</option>
+                            <option value="medium">{T.options.traffic.medium}</option>
+                            <option value="high">{T.options.traffic.high}</option>
                         </select>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                         <FieldLabel
-                            label="Horizon"
+                            label={T.form.horizon}
                             htmlFor="single-horizon"
-                            hint="Time steps (>= 1)"
-                            tooltip="Longer horizons simulate more time steps and may slow responses."
+                            hint={T.form.horizonHint}
+                            tooltip={T.form.horizonTooltip}
                         />
                         <input
                             id="single-horizon"
@@ -497,14 +504,14 @@ function SimulationDashboard({ backendUrl = "" }) {
                 </div>
                 <InlineAlert
                     tone="info"
-                    message="Tip: keep horizons between 12–72 steps for fast, stable runs. Traffic level and restrictions are validated before sending."
+                    message={T.sections.runSimulation.tip}
                 />
             </SectionCard>
 
             <SectionCard
                 step="2"
-                title="Run Simulation (A)"
-                subtitle="Send the configured parameters to the backend and wait for the latest KPIs."
+                title={T.sections.runSimulation.title}
+                subtitle={T.sections.runSimulation.subtitle}
             >
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center" }}>
                     <button
@@ -524,52 +531,52 @@ function SimulationDashboard({ backendUrl = "" }) {
                         }}
                         aria-busy={loading}
                     >
-                        {loading ? "Running simulation..." : "Run Simulation"}
+                        {loading ? T.buttons.runningSimulation : T.buttons.runSimulation}
                     </button>
                     <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
-                        <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "#0f172a", fontSize: "0.95rem" }} title="Adds AI-generated context to the recommended actions.">
+                        <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "#0f172a", fontSize: "0.95rem" }} title={T.toggles.useAiTooltip}>
                             <input
                                 type="checkbox"
                                 checked={useLlm}
                                 onChange={(event) => setUseLlm(event.target.checked)}
                             />
-                            Use AI commentary
+                            {T.toggles.useAi}
                         </label>
-                        <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "#0f172a", fontSize: "0.95rem" }} title="Automatically request recommendations after each successful run.">
+                        <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "#0f172a", fontSize: "0.95rem" }} title={T.toggles.autoRecommendTooltip}>
                             <input
                                 type="checkbox"
                                 checked={autoRecommend}
                                 onChange={(event) => setAutoRecommend(event.target.checked)}
                             />
-                            Auto-generate recommendations
+                            {T.toggles.autoRecommend}
                         </label>
                     </div>
                 </div>
                 {loading && (
                     <InlineAlert
                         tone="info"
-                        message="Waiting for the backend... this may take a few seconds depending on the horizon."
+                        message={T.messages.waitingBackend}
                     />
                 )}
-                {error && <InlineAlert tone="error" title="Validation or API issue" message={error} />}
+                {error && <InlineAlert tone="error" title={T.messages.validationOrApi} message={error} />}
                 {!loading && !simulationResult && !error && (
-                    <InlineAlert tone="muted" message="No results yet. Configure parameters above and click Run Simulation." />
+                    <InlineAlert tone="muted" message={T.messages.noResultsYet} />
                 )}
                 {simulationResult && (
                     <InlineAlert
                         tone="success"
-                        title="Latest run"
-                        message={`Scenario ${simulationResult.scenario} • Zones: ${simulationResult.zones?.join(", ") ?? "n/a"} • Steps: ${simulationResult.time?.length ?? 0}`}
+                        title={T.messages.latestRunTitle}
+                        message={`${T.sections.kpis.scenarioLabel} ${simulationResult.scenario} • Zonas: ${simulationResult.zones?.join(", ") ?? T.sections.kpis.notAvailable} • Pasos: ${simulationResult.time?.length ?? 0}`}
                     />
                 )}
             </SectionCard>
 
             <SectionCard
                 step="3"
-                title="Map visualization"
-                subtitle="Explore the Valle de Aburrá map. Layers: sectors, monitoring points, and heatmap."
+                title={T.sections.mapVisualization.title}
+                subtitle={T.sections.mapVisualization.subtitle}
             >
-                {!simulationResult && <InlineAlert tone="muted" message="Run a simulation to see the styled sectors, points, and heatmap on the map." />}
+                {!simulationResult && <InlineAlert tone="muted" message={T.sections.mapVisualization.empty} />}
                 <UrbanMap
                     simulationResult={simulationResult}
                     pollutionByZone={latestPollution}
@@ -579,8 +586,8 @@ function SimulationDashboard({ backendUrl = "" }) {
 
             <SectionCard
                 step="4"
-                title="KPIs"
-                subtitle="Per-sector indicators based on the latest time step from the simulation."
+                title={T.sections.kpis.title}
+                subtitle={T.sections.kpis.subtitle}
             >
                 <KpiPanel
                     simulationResult={simulationResult}
@@ -591,13 +598,11 @@ function SimulationDashboard({ backendUrl = "" }) {
 
             <SectionCard
                 step="5"
-                title="Comparison A/B"
-                subtitle="Construct two scenarios and compare them visually (side-by-side or overlay slider)."
+                title={T.sections.comparison.title}
+                subtitle={T.sections.comparison.subtitle}
             >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                    <div style={{ color: "#475569", fontSize: "0.95rem" }}>
-                        Fill the A and B cards with traffic and policy toggles, then run the comparison request.
-                    </div>
+                    <div style={{ color: "#475569", fontSize: "0.95rem" }}>{T.sections.comparison.instructions}</div>
                     <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                         <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                             <input
@@ -606,7 +611,7 @@ function SimulationDashboard({ backendUrl = "" }) {
                                 checked={comparisonMode === "side-by-side"}
                                 onChange={(event) => setComparisonMode(event.target.value)}
                             />
-                            Side-by-side
+                            {T.sections.comparison.sideBySide}
                         </label>
                         <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                             <input
@@ -615,7 +620,7 @@ function SimulationDashboard({ backendUrl = "" }) {
                                 checked={comparisonMode === "overlay"}
                                 onChange={(event) => setComparisonMode(event.target.value)}
                             />
-                            Overlay (slider)
+                            {T.sections.comparison.overlay}
                         </label>
                         <button
                             type="button"
@@ -633,32 +638,36 @@ function SimulationDashboard({ backendUrl = "" }) {
                                 fontSize: "0.95rem",
                             }}
                         >
-                            {comparisonLoading ? "Comparing..." : "Compare Scenarios"}
+                            {comparisonLoading ? T.buttons.comparing : T.buttons.compareScenarios}
                         </button>
                     </div>
                 </div>
 
                 <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "12px" }}>
                     <ScenarioConfigForm
-                        title="Scenario A"
+                        title={T.options.scenarios.labelA}
                         config={scenarioA}
                         onChange={setScenarioA}
                     />
                     <ScenarioConfigForm
-                        title="Scenario B"
+                        title={T.options.scenarios.labelB}
                         config={scenarioB}
                         onChange={setScenarioB}
                     />
                 </div>
 
                 {comparisonError && (
-                    <InlineAlert tone="error" title="Comparison error" message={comparisonError} />
+                    <InlineAlert tone="error" title={T.sections.comparison.errorTitle} message={comparisonError} />
                 )}
                 {comparisonResult && (
                     <InlineAlert
                         tone="success"
-                        title="Comparison ready"
-                        message={`A = ${resolvedLabelA} • B = ${resolvedLabelB} (steps ${comparisonResult.result_a?.time?.length ?? "?"})`}
+                        title={T.sections.comparison.successTitle}
+                        message={T.sections.comparison.successMessage(
+                            resolvedLabelA,
+                            resolvedLabelB,
+                            comparisonResult.result_a?.time?.length ?? "?",
+                        )}
                     />
                 )}
 
@@ -673,8 +682,8 @@ function SimulationDashboard({ backendUrl = "" }) {
 
             <SectionCard
                 step="6"
-                title="Recommendations"
-                subtitle="Request rule-based mitigation actions, with optional AI commentary."
+                title={T.sections.recommendations.title}
+                subtitle={T.sections.recommendations.subtitle}
             >
                 <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
                     <button
@@ -694,11 +703,11 @@ function SimulationDashboard({ backendUrl = "" }) {
                             fontSize: "0.95rem",
                         }}
                     >
-                        {recommendationStatus === "loading" ? "Loading..." : "Get Recommendations"}
+                        {recommendationStatus === "loading" ? T.buttons.loadingRecommendations : T.buttons.getRecommendations}
                     </button>
                     {!simulationResult && (
                         <span style={{ color: "#475569", fontSize: "0.95rem" }}>
-                            Run Simulation first to populate KPIs and unlock this button.
+                            {T.sections.recommendations.locked}
                         </span>
                     )}
                 </div>

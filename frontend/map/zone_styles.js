@@ -1,8 +1,12 @@
+import { UI_TEXTS_ES } from "../constants/texts_es";
+
+const T = UI_TEXTS_ES;
+
 export const POLLUTION_BUCKETS = [
-    { key: "low", label: "Low", min: 0, max: 20, color: "#0ea5e9" },
-    { key: "moderate", label: "Moderate", min: 20, max: 35, color: "#22c55e" },
-    { key: "high", label: "High", min: 35, max: 50, color: "#f59e0b" },
-    { key: "critical", label: "Critical", min: 50, max: Infinity, color: "#dc2626" },
+    { key: "low", label: T.bucketLabels.low, min: 0, max: 20, color: "#0ea5e9" },
+    { key: "moderate", label: T.bucketLabels.moderate, min: 20, max: 35, color: "#22c55e" },
+    { key: "high", label: T.bucketLabels.high, min: 35, max: 50, color: "#f59e0b" },
+    { key: "critical", label: T.bucketLabels.critical, min: 50, max: Infinity, color: "#dc2626" },
 ];
 
 export const HEATMAP_GRADIENT = {

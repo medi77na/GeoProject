@@ -1,3 +1,5 @@
+import { UI_TEXTS_ES } from "../constants/texts_es";
+
 const API_KEY_HEADER = "X-API-Key";
 const API_KEY = process.env.REACT_APP_API_KEY || "change_me_in_production";
 
@@ -20,7 +22,7 @@ export async function apiFetch(url, options = {}) {
     });
 
     if (response.status === 401) {
-        throw new Error("Invalid or missing API Key. Please contact the system administrator.");
+        throw new Error(UI_TEXTS_ES.errors.error401);
     }
 
     return response;
@@ -35,7 +37,14 @@ async function postJson(path, payload, backendUrl = "") {
 
     if (!response.ok) {
         const detail = await response.text();
-        const message = detail || `Request failed with status ${response.status}`;
+        if (response.status === 401) {
+            throw new Error(UI_TEXTS_ES.errors.error401);
+        }
+        if (response.status === 400) {
+            throw new Error(UI_TEXTS_ES.errors.invalidParameters);
+        }
+        const generic = `${UI_TEXTS_ES.errors.serverError} (estado ${response.status})`;
+        const message = detail || generic;
         throw new Error(message);
     }
 
