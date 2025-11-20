@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
 from backend.models import SimulationRequest, SimulationResponse
-from backend.services import SimulationParams, generate_synthetic_data, run_simulation
+from backend.services import generate_synthetic_data, run_simulation
 
 router = APIRouter(prefix="/api/v1")
 DEFAULT_ZONES = ["Bello", "Medellin", "Envigado", "Itagui"]
@@ -15,35 +15,20 @@ def ping():
 @router.post("/simulate", response_model=SimulationResponse)
 def simulate(request: SimulationRequest) -> SimulationResponse:
     try:
-        zones = request.zones or DEFAULT_ZONES
+        zones = request.resolved_zones(DEFAULT_ZONES)
+        steps = request.total_steps()
 
         synthetic = generate_synthetic_data(
             zones=zones,
-            horizon=request.horizon,
+            horizon=steps,
             scenario=request.scenario,
             traffic_level=request.traffic_level,
             seed=request.seed,
         )
 
-        base_params = SimulationParams()
-        params = SimulationParams(
-            alpha=request.alpha if request.alpha is not None else base_params.alpha,
-            beta=request.beta if request.beta is not None else base_params.beta,
-            inertia=(
-                request.inertia if request.inertia is not None else base_params.inertia
-            ),
-            dispersion_factor=(
-                request.dispersion_factor
-                if request.dispersion_factor is not None
-                else base_params.dispersion_factor
-            ),
-        )
-
         result = run_simulation(
+            request=request,
             synthetic_data=synthetic,
-            steps=request.horizon,
-            scenario=request.scenario,
-            params=params,
         )
 
     except ValueError as exc:
