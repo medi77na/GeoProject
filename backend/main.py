@@ -24,6 +24,10 @@ tags_metadata = [
         "name": "System",
         "description": "Health checks and system-level endpoints.",
     },
+    {
+        "name": "Map",
+        "description": "Read-only endpoints that expose base geometries for UI layers.",
+    },
 ]
 
 app = FastAPI(
