@@ -98,3 +98,47 @@ Estructura base del proyecto:
 
 /docs
     architecture.md      # Este documento
+
+## Phase 1 MVP – End-to-end overview
+
+### High-level components
+- **Backend (FastAPI):** Exposes `/health` for monitoring and `/api/v1/simulate` for running synthetic scenarios. It orchestrates validation, calls to services, and response shaping.
+- **Services layer:**
+  - `synthetic_data` generator creates seed traffic/pollution curves per zone based on scenario, horizon, traffic level, and optional seed.
+  - `simulation_engine` evolves the seed data using parameters (alpha, beta, inertia, dispersion_factor) to produce a `SimulationResult`.
+  - `kpi_calculator` derives traffic index, pollution averages/maxima, and congestion index per zone from the `SimulationResult`.
+- **Frontend (Streamlit):** Provides controls for scenario/parameter selection and renders visualizations (time series, pollution map, KPI panel) based on the latest simulation stored in session state.
+
+### Textual component diagram
+
+```
+UI (Streamlit controls)
+    ↓ POST /api/v1/simulate (FastAPI backend)
+        → synthetic_data generator
+        → simulation_engine
+        → KPI calculator (compute_kpis)
+    ← SimulationResult JSON
+        ↳ Time series charts
+        ↳ Pollution map (folium/Leaflet)
+        ↳ KPI panel (pandas table + styling)
+```
+
+### Main endpoints
+- `GET /health` – Lightweight health check to verify the backend is up.
+- `POST /api/v1/simulate` – Main simulation endpoint that the UI (and tests) call.
+
+**`POST /api/v1/simulate` details**
+- **Method & path:** `POST /api/v1/simulate`
+- **Key parameters:**
+  - `scenario` (`"A"` or `"B"`)
+  - `zones` (optional list; defaults to Bello, Medellin, Envigado, Itagui)
+  - `horizon` (positive integer for time steps)
+  - `traffic_level` (`"low"`, `"medium"`, `"high"`)
+  - `seed` (optional integer for reproducibility)
+  - Optional model parameters: `alpha`, `beta`, `inertia`, `dispersion_factor`
+- **Response structure:** JSON containing
+  - `scenario` label,
+  - `zones` array,
+  - `time` array (discrete steps),
+  - `traffic` dict mapping each zone to a list of ρ(t) values,
+  - `pollution` dict mapping each zone to C(t) values. This payload feeds the UI charts, map, and KPI calculator.

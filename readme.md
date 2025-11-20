@@ -8,19 +8,31 @@ This repository contains the monorepo for the Urban Simulator MVP (Phase 1 – A
 - `frontend/` – Streamlit UI that will consume the backend and render charts and maps.
 - `docs/` – Project documentation (including `architecture.md`).
 
+## Requirements
+
+- Python **3.9 or newer** (3.9–3.11 tested).
+- `pip` and `venv` (bundled with Python) to manage dependencies in `.venv`.
+- Git (recommended for cloning and contributing).
+- Optional: `make`, but helper scripts (`run_backend.*`, `run_frontend.*`) are already included.
+
 ## Getting started (dev)
 
-1. Create and activate a Python virtual environment.
-2. Install backend dependencies:
+1. Create and activate a Python virtual environment (see **Environment setup** below).
+2. Install dependencies:
    ```bash
-   pip install -r requirements.txt  # when available
-3. Run de Backend
-    ```bash
-    uvicorn backend.main:app --reload
-4. Run the Frontend
-    ```bash
-    streamlit run frontend/app.py
-See docs/architecture.md for the detailed system design.
+   pip install -r requirements.txt
+   ```
+3. Run the backend:
+   ```bash
+   uvicorn backend.main:app --reload --port 8000
+   ```
+4. Run the frontend:
+   ```bash
+   streamlit run frontend/app.py --server.port 8501
+   ```
+
+See `docs/architecture.md` for the detailed system design.
+
 ## Environment setup
 
 1. Install Python 3.9+ and ensure `python --version` returns at least `3.9`.
@@ -36,6 +48,38 @@ See docs/architecture.md for the detailed system design.
 - Start the frontend via `./run_frontend.sh` (macOS/Linux) or `run_frontend.bat` (Windows). The UI will be available at `http://localhost:8501`.
 
 If something fails, double-check that the virtual environment is activated, dependencies installed, and you are using Python 3.9 or newer.
+
+## Running the backend
+
+Use the provided helper script or launch uvicorn manually:
+
+```bash
+uvicorn backend.main:app --reload --port 8000
+```
+
+Health endpoints:
+
+- http://localhost:8000/health – quick readiness probe.
+- http://localhost:8000/docs – interactive OpenAPI (Swagger) UI for trying `/api/v1/simulate`.
+
+## Running the frontend
+
+Start Streamlit from the repo root:
+
+```bash
+streamlit run frontend/app.py --server.port 8501
+```
+
+Open http://localhost:8501 in your browser. The UI reads `BACKEND_URL` from the environment (defaults to `http://localhost:8000`), so make sure the backend is running first for the best experience.
+
+## First simulation walkthrough
+
+1. Ensure the backend and frontend are running locally.
+2. Open http://localhost:8501.
+3. Select **Scenario A**, keep the default horizon/traffic level/dispersion factor values, and leave the seed unchecked (random seed).
+4. Click **Run simulation**. A success banner should appear once `/api/v1/simulate` returns 200.
+5. Review the time-series charts (traffic and pollution), scroll to the pollution map to inspect zone colors, and check the KPI panel for per-zone indices.
+6. Switch to **Scenario B**, optionally adjust horizon or traffic level, and rerun to compare differences across charts, map, and KPIs.
 
 ## Backend API overview
 
