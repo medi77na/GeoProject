@@ -8,14 +8,14 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-import folium
-import pandas as pd
-import plotly.express as px
-import requests
-import streamlit as st
-from streamlit_folium import st_folium
+import folium  # noqa: E402
+import pandas as pd  # noqa: E402
+import plotly.express as px  # noqa: E402
+import requests  # noqa: E402
+import streamlit as st  # noqa: E402
+from streamlit_folium import st_folium  # noqa: E402
 
-from backend.services import (
+from backend.services import (  # noqa: E402
     KPIResult,
     SimulationResult,
     compute_kpis,
