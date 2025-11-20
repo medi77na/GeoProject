@@ -48,76 +48,229 @@ function ScenarioConfigForm({ title, config, onChange }) {
         <div
             style={{
                 flex: "1 1 320px",
-                border: "1px solid #e5e7eb",
-                borderRadius: "8px",
-                padding: "12px",
+                border: "1px solid #e2e8f0",
+                borderRadius: "10px",
+                padding: "14px",
                 background: "#fff",
+                minWidth: "280px",
             }}
         >
-            <div style={{ fontWeight: 700, marginBottom: "10px", color: "#0f172a" }}>{title}</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    Label (legend)
+            <div style={{ fontWeight: 800, marginBottom: "10px", color: "#0f172a" }}>{title}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <FieldLabel
+                        label="Legend label"
+                        hint="Displayed in the comparison legend."
+                        htmlFor={`${title}-label`}
+                        tooltip="Name each scenario so the comparison legend is clear."
+                    />
                     <input
+                        id={`${title}-label`}
                         type="text"
                         value={config.label}
                         onChange={(event) => onChange({ ...config, label: event.target.value })}
                         placeholder="Baseline / Mitigation"
-                        style={{ padding: "6px 8px", borderRadius: "6px", border: "1px solid #e5e7eb" }}
+                        style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "0.95rem" }}
                     />
-                </label>
-                <label>
-                    Scenario
-                    <select
-                        value={config.scenario}
-                        onChange={(event) => onChange({ ...config, scenario: event.target.value })}
-                        style={{ marginLeft: "8px" }}
-                    >
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                    </select>
-                </label>
-                <label>
-                    Traffic level
-                    <select
-                        value={config.traffic_level}
-                        onChange={(event) => onChange({ ...config, traffic_level: event.target.value })}
-                        style={{ marginLeft: "8px" }}
-                    >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                    </select>
-                </label>
-                <label>
-                    Horizon
-                    <input
-                        type="number"
-                        min="1"
-                        value={config.horizon}
-                        onChange={(event) => onChange({ ...config, horizon: event.target.value })}
-                        style={{ marginLeft: "8px", width: "100px" }}
-                    />
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <input
-                        type="checkbox"
-                        checked={config.pico_placa_enabled}
-                        onChange={(event) => onChange({ ...config, pico_placa_enabled: event.target.checked })}
-                    />
-                    Pico y placa enabled
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <input
-                        type="checkbox"
-                        checked={config.cargo_restriction_enabled}
-                        onChange={(event) => onChange({
-                            ...config,
-                            cargo_restriction_enabled: event.target.checked,
-                        })}
-                    />
-                    Cargo restriction enabled
-                </label>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "10px", alignItems: "end" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <FieldLabel label="Scenario" htmlFor={`${title}-scenario`} tooltip="Scenario A (baseline) vs Scenario B (intervention)" />
+                        <select
+                            id={`${title}-scenario`}
+                            value={config.scenario}
+                            onChange={(event) => onChange({ ...config, scenario: event.target.value })}
+                            style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "0.95rem" }}
+                        >
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                        </select>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <FieldLabel label="Traffic level" htmlFor={`${title}-traffic`} tooltip="Higher traffic increases baseline congestion." />
+                        <select
+                            id={`${title}-traffic`}
+                            value={config.traffic_level}
+                            onChange={(event) => onChange({ ...config, traffic_level: event.target.value })}
+                            style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "0.95rem" }}
+                        >
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <FieldLabel label="Horizon" htmlFor={`${title}-horizon`} hint="Time steps" tooltip="Minimum 1. Higher values increase runtime." />
+                        <input
+                            id={`${title}-horizon`}
+                            type="number"
+                            min="1"
+                            value={config.horizon}
+                            onChange={(event) => onChange({ ...config, horizon: event.target.value })}
+                            style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "0.95rem" }}
+                        />
+                    </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "0.95rem", color: "#0f172a" }} title="Toggle peak-hour restrictions for private vehicles.">
+                        <input
+                            type="checkbox"
+                            checked={config.pico_placa_enabled}
+                            onChange={(event) => onChange({ ...config, pico_placa_enabled: event.target.checked })}
+                        />
+                        Pico y placa enabled
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "0.95rem", color: "#0f172a" }} title="Restrict heavy-duty cargo circulation during the horizon.">
+                        <input
+                            type="checkbox"
+                            checked={config.cargo_restriction_enabled}
+                            onChange={(event) => onChange({
+                                ...config,
+                                cargo_restriction_enabled: event.target.checked,
+                            })}
+                        />
+                        Cargo restriction enabled
+                    </label>
+                    <div style={{ color: "#475569", fontSize: "0.9rem" }}>Advanced policy toggles are optional and only affect the A/B comparison payload.</div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const alertTone = {
+    info: { background: "#eff6ff", border: "#bfdbfe", color: "#1d4ed8" },
+    success: { background: "#ecfdf3", border: "#bbf7d0", color: "#15803d" },
+    warning: { background: "#fffbeb", border: "#fef3c7", color: "#92400e" },
+    error: { background: "#fef2f2", border: "#fee2e2", color: "#b91c1c" },
+    muted: { background: "#f8fafc", border: "#e2e8f0", color: "#475569" },
+};
+
+function InlineAlert({ tone = "info", title, message }) {
+    const palette = alertTone[tone] ?? alertTone.info;
+    return (
+        <div
+            style={{
+                background: palette.background,
+                border: `1px solid ${palette.border}`,
+                color: palette.color,
+                padding: "10px 12px",
+                borderRadius: "10px",
+                fontSize: "0.95rem",
+            }}
+        >
+            {title && <div style={{ fontWeight: 700, marginBottom: "4px" }}>{title}</div>}
+            <div>{message}</div>
+        </div>
+    );
+}
+
+function SectionCard({ step, title, subtitle, children }) {
+    return (
+        <section
+            style={{
+                background: "#fff",
+                border: "1px solid #e2e8f0",
+                padding: "16px",
+                borderRadius: "12px",
+                boxShadow: "0 1px 2px rgba(15, 23, 42, 0.05)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+            }}
+        >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", flexWrap: "wrap" }}>
+                <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "0.95rem", color: "#2563eb", fontWeight: 700 }}>
+                        {step ? `Section ${step}` : "Section"}
+                        <span style={{ display: "inline-block", height: "12px", width: "1px", background: "#cbd5e1" }} />
+                        <span style={{ color: "#0f172a" }}>{title}</span>
+                    </div>
+                    {subtitle && <div style={{ color: "#475569", marginTop: "4px", fontSize: "0.95rem" }}>{subtitle}</div>}
+                </div>
+            </div>
+            {children}
+        </section>
+    );
+}
+
+function FieldLabel({ label, hint, htmlFor, tooltip }) {
+    return (
+        <label htmlFor={htmlFor} style={{ display: "flex", flexDirection: "column", gap: "6px", fontWeight: 600, color: "#0f172a", fontSize: "0.95rem" }} title={tooltip}>
+            <span>{label}</span>
+            {hint && <span style={{ color: "#475569", fontWeight: 400, fontSize: "0.9rem" }}>{hint}</span>}
+        </label>
+    );
+}
+
+function KpiPanel({ simulationResult, pollutionByZone, trafficByZone }) {
+    if (!simulationResult) {
+        return (
+            <InlineAlert
+                tone="muted"
+                message="No results yet. Run the simulation to populate KPIs for each sector."
+            />
+        );
+    }
+
+    const zones = simulationResult.zones ?? [];
+    if (!zones.length) {
+        return (
+            <InlineAlert
+                tone="warning"
+                title="Missing zones"
+                message="The backend did not return any zones for this run."
+            />
+        );
+    }
+
+    const horizon = simulationResult.time?.length ?? 0;
+    const scenarioLabel = simulationResult.scenario ? `Scenario ${simulationResult.scenario}` : "Scenario";
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <div style={{ padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: "10px", background: "#f8fafc", color: "#0f172a", minWidth: "180px" }}>
+                    <div style={{ fontWeight: 700 }}>{scenarioLabel}</div>
+                    <div style={{ color: "#475569", fontSize: "0.95rem" }}>Horizon: {horizon} steps</div>
+                </div>
+                <div style={{ padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: "10px", background: "#f8fafc", color: "#0f172a", minWidth: "180px" }}>
+                    <div style={{ fontWeight: 700 }}>Traffic level</div>
+                    <div style={{ color: "#475569", fontSize: "0.95rem" }}>{simulationResult.traffic_level ?? "n/a"}</div>
+                </div>
+            </div>
+            <div
+                style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                    gap: "12px",
+                }}
+            >
+                {zones.map((zone) => {
+                    const pollution = pollutionByZone?.[zone] ?? pollutionByZone?.[zone?.toLowerCase()] ?? null;
+                    const traffic = trafficByZone?.[zone] ?? trafficByZone?.[zone?.toLowerCase()] ?? null;
+                    return (
+                        <div
+                            key={zone}
+                            style={{
+                                border: "1px solid #e2e8f0",
+                                borderRadius: "10px",
+                                padding: "12px",
+                                background: "#fff",
+                            }}
+                        >
+                            <div style={{ fontWeight: 700, color: "#0f172a", marginBottom: "6px" }}>{zone}</div>
+                            <div style={{ color: "#475569", fontSize: "0.95rem" }}>
+                                PM2.5 (last step):{" "}
+                                <strong>{Number.isFinite(pollution) ? `${pollution.toFixed(1)} μg/m³` : "n/a"}</strong>
+                            </div>
+                            <div style={{ color: "#475569", fontSize: "0.95rem", marginTop: "4px" }}>
+                                Traffic (rel.):{" "}
+                                <strong>{Number.isFinite(traffic) ? traffic.toFixed(2) : "n/a"}</strong>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );
@@ -137,7 +290,6 @@ function SimulationDashboard({ backendUrl = "" }) {
     const [comparisonResult, setComparisonResult] = useState(null);
     const [comparisonLoading, setComparisonLoading] = useState(false);
     const [comparisonError, setComparisonError] = useState(null);
-    const [activeView, setActiveView] = useState("single");
     const [recommendation, setRecommendation] = useState(null);
     const [recommendationStatus, setRecommendationStatus] = useState("idle");
     const [recommendationError, setRecommendationError] = useState(null);
@@ -227,6 +379,14 @@ function SimulationDashboard({ backendUrl = "" }) {
     };
 
     const runSimulation = async () => {
+        const horizonValue = resolveHorizon(singleHorizon);
+        if (!Number.isFinite(horizonValue) || horizonValue < 1) {
+            setSimulationResult(null);
+            resetRecommendationState();
+            setError("Please provide a horizon of at least 1 time step to run the simulation.");
+            return;
+        }
+
         setError(null);
         setLoading(true);
         setActiveView("single");
@@ -235,7 +395,7 @@ function SimulationDashboard({ backendUrl = "" }) {
         const payload = {
             ...DEFAULT_SIM_PAYLOAD,
             scenario: singleScenario,
-            horizon: resolveHorizon(singleHorizon),
+            horizon: horizonValue,
             traffic_level: singleTrafficLevel,
         };
 
@@ -246,7 +406,10 @@ function SimulationDashboard({ backendUrl = "" }) {
             });
 
             if (!response.ok) {
-                throw new Error(`Simulation failed (status ${response.status})`);
+                const friendly = response.status === 401
+                    ? "Simulation failed: API key missing or invalid (401)."
+                    : `Simulation failed (status ${response.status}). Please retry.`;
+                throw new Error(friendly);
             }
 
             const data = await response.json();
@@ -281,7 +444,10 @@ function SimulationDashboard({ backendUrl = "" }) {
             });
 
             if (!response.ok) {
-                throw new Error(`Comparison failed (status ${response.status})`);
+                const friendly = response.status === 401
+                    ? "Comparison failed: API key missing or invalid (401)."
+                    : `Comparison failed (status ${response.status}). Please check the parameters.`;
+                throw new Error(friendly);
             }
 
             const data = await response.json();
@@ -299,158 +465,169 @@ function SimulationDashboard({ backendUrl = "" }) {
     const resolvedLabelB = comparisonResult?.label_b || scenarioB.label || "Scenario B";
 
     return (
-        <div className="simulation-dashboard">
-            <header style={{ marginBottom: "16px" }}>
+        <div className="simulation-dashboard" style={{ display: "flex", flexDirection: "column", gap: "16px", fontSize: "14px" }}>
+            <header style={{ marginBottom: "4px" }}>
                 <h1 style={{ margin: 0 }}>Urban Simulator – Phase 2 Dashboard</h1>
-                <p style={{ margin: "6px 0 0 0", color: "#4b5563" }}>
-                    Run simulations and visualize the Valle de Aburrá map with dynamic zone styling.
+                <p style={{ margin: "6px 0 0 0", color: "#4b5563", fontSize: "0.98rem" }}>
+                    Follow the ordered steps to configure parameters, run scenario A, explore the map layers, compare A/B, and request recommendations.
                 </p>
             </header>
 
-            <section
-                style={{
-                    background: "#f8fafc",
-                    border: "1px solid #e5e5eb",
-                    padding: "16px",
-                    borderRadius: "8px",
-                    marginBottom: "16px",
-                }}
+            <SectionCard
+                step="1"
+                title="Simulation parameters"
+                subtitle="Set scenario A inputs before sending them to the /api/v1/simulate endpoint."
             >
-                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                    <label>
-                        Scenario
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <FieldLabel label="Scenario" htmlFor="single-scenario" tooltip="Choose A for baseline or B for intervention." />
                         <select
+                            id="single-scenario"
                             value={singleScenario}
                             onChange={(event) => setSingleScenario(event.target.value)}
-                            style={{ marginLeft: "8px" }}
+                            style={{ padding: "10px 12px", borderRadius: "10px", border: "1px solid #e5e7eb", fontSize: "0.95rem" }}
                         >
                             <option value="A">A</option>
                             <option value="B">B</option>
                         </select>
-                    </label>
-
-                    <label>
-                        Traffic level
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <FieldLabel
+                            label="Traffic level"
+                            htmlFor="single-traffic"
+                            hint="Advanced: baseline congestion level."
+                            tooltip="Adjusts starting congestion across the network."
+                        />
                         <select
+                            id="single-traffic"
                             value={singleTrafficLevel}
                             onChange={(event) => setSingleTrafficLevel(event.target.value)}
-                            style={{ marginLeft: "8px" }}
+                            style={{ padding: "10px 12px", borderRadius: "10px", border: "1px solid #e5e7eb", fontSize: "0.95rem" }}
                         >
                             <option value="low">Low</option>
                             <option value="medium">Medium</option>
                             <option value="high">High</option>
                         </select>
-                    </label>
-
-                    <label>
-                        Horizon
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <FieldLabel
+                            label="Horizon"
+                            htmlFor="single-horizon"
+                            hint="Time steps (>= 1)"
+                            tooltip="Longer horizons simulate more time steps and may slow responses."
+                        />
                         <input
+                            id="single-horizon"
                             type="number"
                             min="1"
                             value={singleHorizon}
                             onChange={(event) => setSingleHorizon(event.target.value)}
-                            style={{ marginLeft: "8px", width: "80px" }}
+                            style={{ padding: "10px 12px", borderRadius: "10px", border: "1px solid #e5e7eb", fontSize: "0.95rem" }}
                         />
-                    </label>
+                    </div>
+                </div>
+                <InlineAlert
+                    tone="info"
+                    message="Tip: keep horizons between 12–72 steps for fast, stable runs. Traffic level and restrictions are validated before sending."
+                />
+            </SectionCard>
 
+            <SectionCard
+                step="2"
+                title="Run Simulation (A)"
+                subtitle="Send the configured parameters to the backend and wait for the latest KPIs."
+            >
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center" }}>
                     <button
                         type="button"
                         onClick={runSimulation}
                         disabled={loading}
                         style={{
-                            padding: "8px 14px",
+                            padding: "10px 16px",
                             background: "#2563eb",
                             color: "white",
-                            borderRadius: "6px",
+                            borderRadius: "10px",
                             border: "none",
-                            cursor: "pointer",
+                            cursor: loading ? "not-allowed" : "pointer",
+                            fontWeight: 700,
+                            minWidth: "160px",
+                            fontSize: "0.95rem",
                         }}
+                        aria-busy={loading}
                     >
-                        {loading ? "Running..." : "Run simulation"}
+                        {loading ? "Running simulation..." : "Run Simulation"}
                     </button>
-                </div>
-                {error && (
-                    <div
-                        style={{
-                            marginTop: "10px",
-                            color: "#b91c1c",
-                            border: "1px solid #fecdd3",
-                            background: "#fff1f2",
-                            padding: "8px",
-                            borderRadius: "6px",
-                        }}
-                    >
-                        {error}
+                    <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "#0f172a", fontSize: "0.95rem" }} title="Adds AI-generated context to the recommended actions.">
+                            <input
+                                type="checkbox"
+                                checked={useLlm}
+                                onChange={(event) => setUseLlm(event.target.checked)}
+                            />
+                            Use AI commentary
+                        </label>
+                        <label style={{ display: "flex", alignItems: "center", gap: "8px", color: "#0f172a", fontSize: "0.95rem" }} title="Automatically request recommendations after each successful run.">
+                            <input
+                                type="checkbox"
+                                checked={autoRecommend}
+                                onChange={(event) => setAutoRecommend(event.target.checked)}
+                            />
+                            Auto-generate recommendations
+                        </label>
                     </div>
+                </div>
+                {loading && (
+                    <InlineAlert
+                        tone="info"
+                        message="Waiting for the backend... this may take a few seconds depending on the horizon."
+                    />
+                )}
+                {error && <InlineAlert tone="error" title="Validation or API issue" message={error} />}
+                {!loading && !simulationResult && !error && (
+                    <InlineAlert tone="muted" message="No results yet. Configure parameters above and click Run Simulation." />
                 )}
                 {simulationResult && (
-                    <div style={{ marginTop: "10px", color: "#0f172a" }}>
-                        Latest run:
-                        {" "}
-                        {simulationResult.scenario}
-                        {" "}
-                        |
-                        {" "}
-                        Zones:
-                        {" "}
-                        {simulationResult.zones?.join(", ")}
-                        {" "}
-                        |
-                        {" "}
-                        Steps:
-                        {" "}
-                        {simulationResult.time?.length ?? 0}
-                    </div>
+                    <InlineAlert
+                        tone="success"
+                        title="Latest run"
+                        message={`Scenario ${simulationResult.scenario} • Zones: ${simulationResult.zones?.join(", ") ?? "n/a"} • Steps: ${simulationResult.time?.length ?? 0}`}
+                    />
                 )}
-                <div style={{ marginTop: "14px", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-                    <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <input
-                            type="checkbox"
-                            checked={useLlm}
-                            onChange={(event) => setUseLlm(event.target.checked)}
-                        />
-                        Use AI commentary (LLM)
-                    </label>
-                    <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <input
-                            type="checkbox"
-                            checked={autoRecommend}
-                            onChange={(event) => setAutoRecommend(event.target.checked)}
-                        />
-                        Simulate and recommend automatically
-                    </label>
-                    <button
-                        type="button"
-                        onClick={() => generateRecommendation()}
-                        disabled={recommendationStatus === "loading" || !simulationResult}
-                        style={{
-                            padding: "8px 14px",
-                            background: "#0f172a",
-                            color: "white",
-                            borderRadius: "6px",
-                            border: "none",
-                            cursor: recommendationStatus === "loading" || !simulationResult ? "not-allowed" : "pointer",
-                            opacity: recommendationStatus === "loading" || !simulationResult ? 0.7 : 1,
-                        }}
-                    >
-                        {recommendationStatus === "loading" ? "Generating..." : "Generate recommendation"}
-                    </button>
-                </div>
-            </section>
+            </SectionCard>
 
-            <section
-                style={{
-                    background: "#f8fafc",
-                    border: "1px solid #e5e7eb",
-                    padding: "16px",
-                    borderRadius: "8px",
-                    marginBottom: "16px",
-                }}
+            <SectionCard
+                step="3"
+                title="Map visualization"
+                subtitle="Explore the Valle de Aburrá map. Layers: sectors, monitoring points, and heatmap."
+            >
+                {!simulationResult && <InlineAlert tone="muted" message="Run a simulation to see the styled sectors, points, and heatmap on the map." />}
+                <UrbanMap
+                    simulationResult={simulationResult}
+                    pollutionByZone={latestPollution}
+                    trafficByZone={latestTraffic}
+                />
+            </SectionCard>
+
+            <SectionCard
+                step="4"
+                title="KPIs"
+                subtitle="Per-sector indicators based on the latest time step from the simulation."
+            >
+                <KpiPanel
+                    simulationResult={simulationResult}
+                    pollutionByZone={latestPollution}
+                    trafficByZone={latestTraffic}
+                />
+            </SectionCard>
+
+            <SectionCard
+                step="5"
+                title="Comparison A/B"
+                subtitle="Construct two scenarios and compare them visually (side-by-side or overlay slider)."
             >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                    <div>
-                        <div style={{ fontWeight: 700, marginBottom: "4px" }}>Scenario comparison</div>
-                        <div style={{ color: "#475569" }}>Configure two payloads and run the A/B comparison endpoint.</div>
+                    <div style={{ color: "#475569", fontSize: "0.95rem" }}>
+                        Fill the A and B cards with traffic and policy toggles, then run the comparison request.
                     </div>
                     <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                         <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -476,15 +653,18 @@ function SimulationDashboard({ backendUrl = "" }) {
                             onClick={runComparison}
                             disabled={comparisonLoading}
                             style={{
-                                padding: "8px 14px",
+                                padding: "10px 14px",
                                 background: "#0ea5e9",
                                 color: "white",
-                                borderRadius: "6px",
+                                borderRadius: "10px",
                                 border: "none",
-                                cursor: "pointer",
+                                cursor: comparisonLoading ? "not-allowed" : "pointer",
+                                fontWeight: 700,
+                                minWidth: "170px",
+                                fontSize: "0.95rem",
                             }}
                         >
-                            {comparisonLoading ? "Running..." : "Run comparison"}
+                            {comparisonLoading ? "Comparing..." : "Compare Scenarios"}
                         </button>
                     </div>
                 </div>
@@ -503,97 +683,62 @@ function SimulationDashboard({ backendUrl = "" }) {
                 </div>
 
                 {comparisonError && (
-                    <div
-                        style={{
-                            marginTop: "10px",
-                            color: "#b91c1c",
-                            border: "1px solid #fecdd3",
-                            background: "#fff1f2",
-                            padding: "8px",
-                            borderRadius: "6px",
-                        }}
-                    >
-                        {comparisonError}
-                    </div>
+                    <InlineAlert tone="error" title="Comparison error" message={comparisonError} />
                 )}
                 {comparisonResult && (
-                    <div style={{ marginTop: "12px", color: "#0f172a" }}>
-                        Comparison ready: A = {resolvedLabelA} • B = {resolvedLabelB} (steps {comparisonResult.result_a?.time?.length ?? "?"})
-                    </div>
+                    <InlineAlert
+                        tone="success"
+                        title="Comparison ready"
+                        message={`A = ${resolvedLabelA} • B = ${resolvedLabelB} (steps ${comparisonResult.result_a?.time?.length ?? "?"})`}
+                    />
                 )}
-            </section>
 
-            <section
-                style={{
-                    background: "#f8fafc",
-                    border: "1px solid #e5e7eb",
-                    padding: "16px",
-                    borderRadius: "8px",
-                    marginBottom: "16px",
-                }}
+                <ComparisonView
+                    resultA={comparisonResult?.result_a}
+                    resultB={comparisonResult?.result_b}
+                    labelA={resolvedLabelA}
+                    labelB={resolvedLabelB}
+                    mode={comparisonMode}
+                />
+            </SectionCard>
+
+            <SectionCard
+                step="6"
+                title="Recommendations"
+                subtitle="Request rule-based mitigation actions, with optional AI commentary."
             >
-                <div style={{ marginBottom: "10px" }}>
-                    <h2 style={{ margin: 0 }}>Recommendations</h2>
-                    <p style={{ margin: "4px 0 0 0", color: "#475569" }}>
-                        Transform the latest simulation KPIs into rule-based actions. Severity is driven by PM2.5 and congestion.
-                    </p>
+                <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+                    <button
+                        type="button"
+                        onClick={() => generateRecommendation()}
+                        disabled={recommendationStatus === "loading" || !simulationResult}
+                        style={{
+                            padding: "10px 14px",
+                            background: "#0f172a",
+                            color: "white",
+                            borderRadius: "10px",
+                            border: "none",
+                            cursor: recommendationStatus === "loading" || !simulationResult ? "not-allowed" : "pointer",
+                            opacity: recommendationStatus === "loading" || !simulationResult ? 0.7 : 1,
+                            fontWeight: 700,
+                            minWidth: "180px",
+                            fontSize: "0.95rem",
+                        }}
+                    >
+                        {recommendationStatus === "loading" ? "Loading..." : "Get Recommendations"}
+                    </button>
+                    {!simulationResult && (
+                        <span style={{ color: "#475569", fontSize: "0.95rem" }}>
+                            Run Simulation first to populate KPIs and unlock this button.
+                        </span>
+                    )}
                 </div>
                 <RecommendationsPanel
                     recommendation={recommendation}
                     status={recommendationStatus}
                     error={recommendationError}
                 />
-            </section>
-
-            <section>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
-                    <h2 style={{ margin: 0 }}>Visualization</h2>
-                    <div style={{ display: "flex", gap: "8px" }}>
-                        <button
-                            type="button"
-                            onClick={() => setActiveView("single")}
-                            style={{
-                                padding: "6px 10px",
-                                borderRadius: "6px",
-                                border: activeView === "single" ? "2px solid #2563eb" : "1px solid #cbd5e1",
-                                background: activeView === "single" ? "#eff6ff" : "#fff",
-                                cursor: "pointer",
-                            }}
-                        >
-                            Single simulation
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setActiveView("comparison")}
-                            style={{
-                                padding: "6px 10px",
-                                borderRadius: "6px",
-                                border: activeView === "comparison" ? "2px solid #0ea5e9" : "1px solid #cbd5e1",
-                                background: activeView === "comparison" ? "#e0f2fe" : "#fff",
-                                cursor: "pointer",
-                            }}
-                        >
-                            Comparison view
-                        </button>
-                    </div>
-                </div>
-
-                {activeView === "comparison" ? (
-                    <ComparisonView
-                        resultA={comparisonResult?.result_a}
-                        resultB={comparisonResult?.result_b}
-                        labelA={resolvedLabelA}
-                        labelB={resolvedLabelB}
-                        mode={comparisonMode}
-                    />
-                ) : (
-                    <UrbanMap
-                        simulationResult={simulationResult}
-                        pollutionByZone={latestPollution}
-                        trafficByZone={latestTraffic}
-                    />
-                )}
-            </section>
+            </SectionCard>
         </div>
     );
 }

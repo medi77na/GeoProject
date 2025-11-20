@@ -126,8 +126,8 @@ function SideBySideMaps({
             }}
         >
             <div style={{ flex: "1 1 420px" }}>
-                <div style={{ marginBottom: "6px", fontWeight: 700, color: "#0f172a" }}>
-                    Scenario A • {labelA}
+                <div style={{ marginBottom: "6px" }}>
+                    <ScenarioBadge label={`A • ${labelA}`} variant="A" />
                 </div>
                 <div style={{ position: "relative" }}>
                     <MapContainer
@@ -165,8 +165,8 @@ function SideBySideMaps({
             </div>
 
             <div style={{ flex: "1 1 420px" }}>
-                <div style={{ marginBottom: "6px", fontWeight: 700, color: "#0f172a" }}>
-                    Scenario B • {labelB}
+                <div style={{ marginBottom: "6px" }}>
+                    <ScenarioBadge label={`B • ${labelB}`} variant="B" />
                 </div>
                 <div style={{ position: "relative" }}>
                     <MapContainer
