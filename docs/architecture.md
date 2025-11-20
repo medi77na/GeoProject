@@ -98,8 +98,9 @@ Estructura base del proyecto:
 
 /docs
     architecture.md      # Este documento
+```
 
-## Phase 1 MVP – End-to-end overview
+## Fase 1 MVP – End-to-end overview
 
 ### High-level components
 - **Backend (FastAPI):** Exposes `/health` for monitoring and `/api/v1/simulate` for running synthetic scenarios. It orchestrates validation, calls to services, and response shaping.
@@ -111,7 +112,6 @@ Estructura base del proyecto:
 
 ### Textual component diagram
 
-```
 UI (Streamlit controls)
     ↓ POST /api/v1/simulate (FastAPI backend)
         → synthetic_data generator
@@ -121,7 +121,6 @@ UI (Streamlit controls)
         ↳ Time series charts
         ↳ Pollution map (folium/Leaflet)
         ↳ KPI panel (pandas table + styling)
-```
 
 ### Main endpoints
 - `GET /health` – Lightweight health check to verify the backend is up.
