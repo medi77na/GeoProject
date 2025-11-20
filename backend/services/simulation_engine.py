@@ -1,7 +1,19 @@
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 from backend.models import SimulationRequest
+from backend.models.simulation import (
+    DEFAULT_CARGO_RESTRICTION_ENABLED,
+    DEFAULT_DURATION_MINUTES,
+    DEFAULT_HEAVY_VEHICLE_PERCENTAGE,
+    DEFAULT_INCIDENT_FACTOR,
+    DEFAULT_PEAK_HOURS,
+    DEFAULT_PICO_PLACA_ENABLED,
+    DEFAULT_SPEED_LIMIT_FACTOR,
+    DEFAULT_TIME_STEP_MINUTES,
+    DEFAULT_TRAFFIC_BASE_LEVEL,
+)
 
 from .synthetic_data import SyntheticDataResult
 
@@ -108,6 +120,72 @@ def _normalize_humidity(humidity: float) -> float:
     return max(0.0, min(1.0, value))
 
 
+def _prepare_series(series: Sequence[float], steps: int) -> List[float]:
+    if not series:
+        raise ValueError("Empty series for zone")
+    prepared = [float(value) for value in series[:steps]]
+    if len(prepared) < steps:
+        last = float(series[-1])
+        prepared.extend([last] * (steps - len(prepared)))
+    return prepared
+
+
+@lru_cache(maxsize=32)
+def _cached_time_grid(
+    steps: int, time_step_minutes: int
+) -> Tuple[Tuple[int, ...], Tuple[int, ...], Tuple[int, ...]]:
+    time = tuple(idx * time_step_minutes for idx in range(steps))
+    minutes = tuple(t % (24 * 60) for t in time)
+    hours = tuple((minute // 60) % 24 for minute in minutes)
+    return time, minutes, hours
+
+
+@lru_cache(maxsize=32)
+def _cached_peak_mask(
+    steps: int,
+    time_step_minutes: int,
+    peak_windows: Tuple[Tuple[int, int], ...],
+) -> Tuple[bool, ...]:
+    if not peak_windows:
+        return tuple(False for _ in range(steps))
+    _, minutes_of_day, _ = _cached_time_grid(steps, time_step_minutes)
+    return tuple(_in_window(minute, peak_windows) for minute in minutes_of_day)
+
+
+@lru_cache(maxsize=16)
+def _cached_fast_time_modifiers(
+    steps: int,
+    time_step_minutes: int,
+    scenario: str,
+    peak_windows: Tuple[Tuple[int, int], ...],
+) -> Tuple[float, ...]:
+    multiplier = 1.15 if scenario == "A" else 0.85
+    peak_mask = _cached_peak_mask(steps, time_step_minutes, peak_windows)
+    return tuple(multiplier if is_peak else 1.0 for is_peak in peak_mask)
+
+
+def _is_default_fast_path(request: SimulationRequest) -> bool:
+    return (
+        request.scenario in {"A", "B"}
+        and request.duration_minutes == DEFAULT_DURATION_MINUTES
+        and request.time_step_minutes == DEFAULT_TIME_STEP_MINUTES
+        and request.traffic_level == "medium"
+        and request.traffic_base_level == DEFAULT_TRAFFIC_BASE_LEVEL
+        and not request.traffic_variation_by_hour
+        and tuple(request.peak_hours) == DEFAULT_PEAK_HOURS
+        and request.heavy_vehicle_percentage == DEFAULT_HEAVY_VEHICLE_PERCENTAGE
+        and request.incident_factor == DEFAULT_INCIDENT_FACTOR
+        and request.pico_placa_enabled == DEFAULT_PICO_PLACA_ENABLED
+        and request.cargo_restriction_enabled == DEFAULT_CARGO_RESTRICTION_ENABLED
+        and request.speed_limit_factor == DEFAULT_SPEED_LIMIT_FACTOR
+    )
+
+
+DEFAULT_PEAK_WINDOWS: Tuple[Tuple[int, int], ...] = tuple(
+    _parse_peak_windows(DEFAULT_PEAK_HOURS)
+)
+
+
 def run_simulation(
     *,
     request: SimulationRequest,
@@ -146,13 +224,35 @@ def run_simulation(
         raise ValueError("steps must be positive")
 
     time_step_minutes = request.time_step_minutes
-    time = [idx * time_step_minutes for idx in range(steps)]
+    time_grid, minutes_of_day, hours_of_day = _cached_time_grid(
+        steps, time_step_minutes
+    )
+    time = list(time_grid)
 
-    peak_windows = _parse_peak_windows(request.peak_hours)
+    peak_windows_list = _parse_peak_windows(request.peak_hours)
+    peak_windows_key: Tuple[Tuple[int, int], ...] = tuple(peak_windows_list)
     hour_variation = _normalize_hour_variation(request.traffic_variation_by_hour)
+    fast_path_enabled = (
+        not hour_variation
+        and peak_windows_key == DEFAULT_PEAK_WINDOWS
+        and _is_default_fast_path(request)
+    )
+    if fast_path_enabled:
+        hour_modifiers: Sequence[float] = (1.0,) * steps
+        peak_mask = _cached_peak_mask(steps, time_step_minutes, peak_windows_key)
+    else:
+        hour_modifiers = tuple(hour_variation.get(hour, 1.0) for hour in hours_of_day)
+        if peak_windows_list:
+            peak_mask = tuple(
+                _in_window(minute, peak_windows_list) for minute in minutes_of_day
+            )
+        else:
+            peak_mask = tuple(False for _ in range(steps))
+
     heavy_vehicle_factor = 1.0 + max(0.0, request.heavy_vehicle_percentage)
     incident_factor = max(request.incident_factor, 0.1)
-    policy_factor = max(0.2, request.speed_limit_factor)
+    speed_policy_factor = max(0.2, request.speed_limit_factor)
+    policy_factor = speed_policy_factor
     if request.pico_placa_enabled:
         policy_factor *= request.pico_placa_restriction_factor
     if request.cargo_restriction_enabled:
@@ -175,57 +275,61 @@ def run_simulation(
         * humidity_dispersion
     )
     pollution_accumulation_base = tuned_params.alpha * temperature_factor
+    emission_multiplier = heavy_vehicle_factor * incident_factor
+    if request.pico_placa_enabled:
+        emission_multiplier *= request.pico_placa_restriction_factor
+    if request.cargo_restriction_enabled:
+        emission_multiplier *= 0.9
+    emission_multiplier *= max(0.5, request.speed_limit_factor)
+
+    scenario_peak_multiplier = 1.15 if peak_windows_list and scenario == "A" else 0.85
+    if not peak_windows_list:
+        scenario_peak_multiplier = 1.0
+    if fast_path_enabled and peak_windows_list:
+        time_modifiers = list(
+            _cached_fast_time_modifiers(
+                steps, time_step_minutes, scenario, peak_windows_key
+            )
+        )
+    else:
+        time_modifiers = [
+            hour_modifiers[idx]
+            * (scenario_peak_multiplier if peak_mask[idx] else 1.0)
+            for idx in range(steps)
+        ]
+
+    global_multiplier = heavy_vehicle_factor * incident_factor * policy_factor
+    base_series_weight = 0.7
+    base_level_weight = 0.3 * request.traffic_base_level
+    base_multipliers = [global_multiplier * value for value in time_modifiers]
 
     sim_traffic: Dict[str, List[float]] = {}
     sim_pollution: Dict[str, List[float]] = {}
+    clamp = _clamp_unit
 
     for zone, base_traffic_series in synthetic_data.traffic.items():
         if zone not in synthetic_data.pollution:
             raise ValueError(f"Zone {zone!r} missing in pollution series")
 
         base_pollution_series = synthetic_data.pollution[zone]
-        if len(base_traffic_series) == 0 or len(base_pollution_series) == 0:
+        if len(base_pollution_series) == 0:
             raise ValueError(f"Empty series for zone {zone!r}")
 
-        rho_prev = float(base_traffic_series[0])
+        prepared_traffic = _prepare_series(base_traffic_series, steps)
+        rho_prev = float(prepared_traffic[0])
         c_prev = float(base_pollution_series[0])
 
         zone_traffic: List[float] = []
         zone_pollution: List[float] = []
 
         for idx in range(steps):
-            minute = time[idx] % (24 * 60)
-            hour = (minute // 60) % 24
-            base_idx = min(idx, len(base_traffic_series) - 1)
-            base_rho = float(base_traffic_series[base_idx])
+            base_rho = base_series_weight * prepared_traffic[idx] + base_level_weight
+            base_rho *= base_multipliers[idx]
+            base_rho = clamp(base_rho)
 
-            # Blend base synthetic series with explicit base level.
-            base_rho = 0.7 * base_rho + 0.3 * request.traffic_base_level
-
-            # Hourly modulation using provided dictionary.
-            base_rho *= hour_variation.get(hour, 1.0)
-
-            # Scenario and peak-hour modifiers.
-            if peak_windows and _in_window(minute, peak_windows):
-                peak_multiplier = 1.15 if scenario == "A" else 0.85
-                base_rho *= peak_multiplier
-
-            base_rho *= heavy_vehicle_factor
-            base_rho *= incident_factor
-            base_rho *= policy_factor
-            base_rho = _clamp_unit(base_rho)
-
-            # Discrete update for traffic: mix previous state and base value.
             rho_t = (1.0 - tuned_params.inertia) * base_rho + tuned_params.inertia * rho_prev
-            rho_t = _clamp_unit(rho_t)
+            rho_t = clamp(rho_t)
 
-            # Discrete update for pollution.
-            emission_multiplier = heavy_vehicle_factor * incident_factor
-            if request.pico_placa_enabled:
-                emission_multiplier *= request.pico_placa_restriction_factor
-            if request.cargo_restriction_enabled:
-                emission_multiplier *= 0.9
-            emission_multiplier *= max(0.5, request.speed_limit_factor)
             c_t = (
                 c_prev
                 + pollution_accumulation_base * rho_t * emission_multiplier
