@@ -71,8 +71,12 @@ def main() -> None:
         "Results are stored in session state for later visualization steps."
     )
 
-    scenario = st.radio("Scenario", options=["A", "B"], index=0, help="Baseline vs intervention")
-    horizon = st.slider("Horizon (time steps)", min_value=12, max_value=72, value=24, step=1)
+    scenario = st.radio(
+        "Scenario", options=["A", "B"], index=0, help="Baseline vs intervention"
+    )
+    horizon = st.slider(
+        "Horizon (time steps)", min_value=12, max_value=72, value=24, step=1
+    )
     traffic_level = st.selectbox(
         "Traffic level", options=["low", "medium", "high"], index=1
     )
@@ -263,12 +267,16 @@ def main() -> None:
                             return "Medium"
                         return "High"
 
-                    max_pollution_max = df_kpis["Pollution max"].max() if not df_kpis.empty else 0.0
+                    max_pollution_max = (
+                        df_kpis["Pollution max"].max() if not df_kpis.empty else 0.0
+                    )
 
                     pollution_levels = []
                     congestion_levels = []
                     for _, row in df_kpis.iterrows():
-                        p_level = classify_level_pollution(row["Pollution max"], max_pollution_max)
+                        p_level = classify_level_pollution(
+                            row["Pollution max"], max_pollution_max
+                        )
                         c_level = classify_level_congestion(row["Congestion index"])
                         pollution_levels.append(p_level)
                         congestion_levels.append(c_level)

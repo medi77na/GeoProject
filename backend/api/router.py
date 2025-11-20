@@ -34,9 +34,7 @@ def simulate(request: SimulationRequest) -> SimulationResponse:
             alpha=request.alpha if request.alpha is not None else base_params.alpha,
             beta=request.beta if request.beta is not None else base_params.beta,
             inertia=(
-                request.inertia
-                if request.inertia is not None
-                else base_params.inertia
+                request.inertia if request.inertia is not None else base_params.inertia
             ),
             dispersion_factor=(
                 request.dispersion_factor
