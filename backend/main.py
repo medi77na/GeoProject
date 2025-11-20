@@ -3,7 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
 from backend.api import api_router
+from backend.core.logging_config import setup_logging
 from backend.core.security import API_KEY_HEADER_NAME
+
+setup_logging()
 
 tags_metadata = [
     {

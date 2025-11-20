@@ -1,8 +1,15 @@
-from fastapi import APIRouter, Body, Depends
+import time
+from typing import Dict
+
+from fastapi import APIRouter, Body, Depends, Request
+
+from backend.core.logging_config import get_logger, log_error, log_request, log_result
+from backend.core.security import API_KEY_HEADER_NAME, get_api_key
 
 from backend.models.recommendation_model import RecommendationRequest, RecommendationResponse
 from backend.services.recommendation_service import build_recommendation_response
-from backend.core.security import get_api_key
+
+logger = get_logger(__name__)
 
 router = APIRouter(
     prefix="/recommend",
@@ -105,5 +112,26 @@ RECOMMEND_RESPONSE_EXAMPLE = {
 )
 async def recommend_policies(
     payload: RecommendationRequest = Body(..., examples=RECOMMEND_REQUEST_EXAMPLES),
+    fastapi_request: Request,
 ) -> RecommendationResponse:
-    return build_recommendation_response(payload)
+    start = time.perf_counter()
+    endpoint_name = "/api/v1/recommend"
+    params_dict = payload.model_dump(exclude_none=True)
+    api_key = fastapi_request.headers.get(API_KEY_HEADER_NAME)
+    log_request(logger, endpoint_name, params_dict, api_key)
+
+    try:
+        response = build_recommendation_response(payload)
+    except Exception as exc:
+        log_error(logger, endpoint_name, exc)
+        raise
+
+    execution_ms = int((time.perf_counter() - start) * 1000)
+    summary: Dict[str, int | str | Dict[str, float]] = {
+        "severity": response.severity,
+        "recommendations_count": len(response.recommendations),
+    }
+    if response.kpi_summary:
+        summary["kpi_summary"] = response.kpi_summary
+    log_result(logger, endpoint_name, execution_ms, summary)
+    return response
