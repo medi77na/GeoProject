@@ -20,33 +20,38 @@ export function Legend({ items }) {
                 position: "absolute",
                 bottom: "12px",
                 right: "12px",
-                background: "rgba(255,255,255,0.9)",
-                padding: "10px",
-                borderRadius: "6px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                fontSize: "0.9rem",
-                lineHeight: "1.4",
-                color: "#1f2937",
+                background: "rgba(255,255,255,0.95)",
+                padding: "12px 14px",
+                borderRadius: "10px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.18)",
+                fontSize: "0.95rem",
+                lineHeight: "1.5",
+                color: "#0f172a",
+                border: "1px solid #e2e8f0",
             }}
+            aria-label="Air quality legend"
         >
-            <div style={{ fontWeight: 700, marginBottom: "6px" }}>Pollution</div>
+            <div style={{ fontWeight: 800, marginBottom: "2px" }}>Air quality scale</div>
+            <div style={{ color: "#475569", fontSize: "0.9rem", marginBottom: "8px" }}>
+                Shared palette for zones, monitoring points, and the heatmap.
+            </div>
             {items.map((item) => (
                 <div
                     key={item.label}
-                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                    style={{ display: "flex", alignItems: "center", gap: "8px", padding: "4px 0" }}
                 >
                     <span
                         style={{
                             display: "inline-block",
-                            width: "14px",
-                            height: "14px",
+                            width: "16px",
+                            height: "16px",
                             backgroundColor: item.color,
-                            borderRadius: "3px",
-                            border: "1px solid #111827",
+                            borderRadius: "4px",
+                            border: "1px solid #0f172a",
                         }}
                     />
                     <span>{item.label}</span>
-                    <span style={{ color: "#6b7280" }}>{item.rangeLabel}</span>
+                    <span style={{ color: "#334155", fontWeight: 600 }}>{item.rangeLabel}</span>
                 </div>
             ))}
         </div>
@@ -59,10 +64,12 @@ export function MapStatus({ message }) {
             style={{
                 background: "#f3f4f6",
                 border: "1px solid #e5e7eb",
-                color: "#374151",
-                padding: "10px 12px",
-                borderRadius: "6px",
-                marginBottom: "10px",
+                color: "#0f172a",
+                padding: "12px 14px",
+                borderRadius: "10px",
+                marginBottom: "12px",
+                fontSize: "0.95rem",
+                lineHeight: "1.5",
             }}
         >
             {message}
@@ -85,28 +92,33 @@ export function LayerToggles({
                 top: "12px",
                 left: "12px",
                 zIndex: 900,
-                background: "rgba(255,255,255,0.95)",
-                padding: "10px",
-                borderRadius: "6px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                fontSize: "0.9rem",
-                color: "#111827",
+                background: "rgba(255,255,255,0.96)",
+                padding: "12px",
+                borderRadius: "10px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.14)",
+                fontSize: "0.95rem",
+                color: "#0f172a",
+                border: "1px solid #e2e8f0",
             }}
         >
-            <div style={{ fontWeight: 700, marginBottom: "6px" }}>Layers</div>
-            <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <input type="checkbox" checked={showZonesLayer} onChange={onToggleZones} />
-                Zones
+            <div style={{ fontWeight: 800, marginBottom: "6px" }}>Layers</div>
+            <div style={{ color: "#475569", marginBottom: "8px", fontSize: "0.9rem" }}>
+                Toggle the overlays to focus on the data you need.
+            </div>
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "2px 0" }} title="Colored polygons showing the latest pollution and traffic metrics per sector.">
+                <input type="checkbox" checked={showZonesLayer} onChange={onToggleZones} aria-label="Show sectors layer" />
+                Zones (sectors)
             </label>
-            <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <input type="checkbox" checked={showPointsLayer} onChange={onTogglePoints} />
-                Points
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "2px 0" }} title="Monitoring points and sensors; size tracks PM2.5 at the last time step.">
+                <input type="checkbox" checked={showPointsLayer} onChange={onTogglePoints} aria-label="Show monitoring points layer" />
+                Points (sensors)
             </label>
-            <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", padding: "2px 0" }} title="Heatmap to spot hot areas across the valley.">
                 <input
                     type="checkbox"
                     checked={showHeatmapLayer}
                     onChange={onToggleHeatmap}
+                    aria-label="Show heatmap layer"
                 />
                 Heatmap
             </label>

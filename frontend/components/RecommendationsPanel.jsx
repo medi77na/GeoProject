@@ -41,13 +41,13 @@ function RecommendationList({ items = [] }) {
                     style={{
                         border: "1px solid #e2e8f0",
                         borderRadius: "8px",
-                        padding: "10px 12px",
+                        padding: "12px",
                         background: "#fff",
                     }}
                 >
                     <div style={{ fontWeight: 700, color: "#0f172a" }}>{item.title}</div>
-                    <div style={{ color: "#475569", marginTop: "4px" }}>{item.description}</div>
-                    <div style={{ color: "#94a3b8", fontSize: "0.85rem", marginTop: "6px" }}>Code: {item.code}</div>
+                    <div style={{ color: "#475569", marginTop: "4px", fontSize: "0.95rem" }}>{item.description}</div>
+                    <div style={{ color: "#94a3b8", fontSize: "0.9rem", marginTop: "6px" }}>Code: {item.code}</div>
                 </li>
             ))}
         </ul>
@@ -107,9 +107,12 @@ function Commentary({ text }) {
 
 function StatusMessage({ status, error }) {
     if (status === "loading") {
-        return <div style={{ color: "#2563eb" }}>Generating recommendations...</div>;
+        return <div style={{ color: "#2563eb", fontSize: "0.95rem" }}>Generating recommendations...</div>;
     }
     if (status === "error") {
+        const friendlyError = (error || "").toLowerCase().includes("401")
+            ? "Access denied (401): verify your API key before requesting recommendations."
+            : error;
         return (
             <div
                 style={{
@@ -118,14 +121,15 @@ function StatusMessage({ status, error }) {
                     border: "1px solid #fecdd3",
                     padding: "10px",
                     borderRadius: "8px",
+                    fontSize: "0.95rem",
                 }}
             >
-                {error || "Could not retrieve recommendations. Please try again."}
+                {friendlyError || "Could not retrieve recommendations. Please try again."}
             </div>
         );
     }
     if (status === "idle") {
-        return <div style={{ color: "#475569" }}>Run a simulation and request recommendations to see results here.</div>;
+        return <div style={{ color: "#475569", fontSize: "0.95rem" }}>Run a simulation and request recommendations to see results here.</div>;
     }
     if (status === "empty") {
         return (
@@ -137,6 +141,7 @@ function StatusMessage({ status, error }) {
                     padding: "10px",
                     borderRadius: "8px",
                     fontWeight: 600,
+                    fontSize: "0.95rem",
                 }}
             >
                 No restrictive measures required based on the current KPIs.

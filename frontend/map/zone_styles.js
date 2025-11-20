@@ -1,9 +1,16 @@
-const POLLUTION_BUCKETS = [
-    { label: "Low", min: 0, max: 20, color: "#4caf50" },
-    { label: "Medium", min: 20, max: 35, color: "#f0c040" },
-    { label: "High", min: 35, max: 50, color: "#f57c00" },
-    { label: "Critical", min: 50, max: Infinity, color: "#c0392b" },
+export const POLLUTION_BUCKETS = [
+    { key: "low", label: "Low", min: 0, max: 20, color: "#0ea5e9" },
+    { key: "moderate", label: "Moderate", min: 20, max: 35, color: "#22c55e" },
+    { key: "high", label: "High", min: 35, max: 50, color: "#f59e0b" },
+    { key: "critical", label: "Critical", min: 50, max: Infinity, color: "#dc2626" },
 ];
+
+export const HEATMAP_GRADIENT = {
+    0.15: "#0ea5e9",
+    0.35: "#22c55e",
+    0.65: "#f59e0b",
+    1: "#dc2626",
+};
 
 export function getZoneColor(pollutionValue) {
     if (pollutionValue === undefined || pollutionValue === null) {
