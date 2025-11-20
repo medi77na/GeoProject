@@ -1,11 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
 from backend.models import SimulationRequest, SimulationResponse
-from backend.services import (
-    SimulationParams,
-    generate_synthetic_data,
-    run_simulation,
-)
+from backend.services import SimulationParams, generate_synthetic_data, run_simulation
 
 router = APIRouter(prefix="/api/v1")
 DEFAULT_ZONES = ["Bello", "Medellin", "Envigado", "Itagui"]

@@ -15,11 +15,7 @@ import requests  # noqa: E402
 import streamlit as st  # noqa: E402
 from streamlit_folium import st_folium  # noqa: E402
 
-from backend.services import (  # noqa: E402
-    KPIResult,
-    SimulationResult,
-    compute_kpis,
-)
+from backend.services import KPIResult, SimulationResult, compute_kpis  # noqa: E402
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 SIMULATE_PATH = "/api/v1/simulate"

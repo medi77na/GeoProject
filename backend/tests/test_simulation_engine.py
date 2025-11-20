@@ -1,10 +1,6 @@
 from statistics import mean
 
-from backend.services import (
-    SimulationParams,
-    generate_synthetic_data,
-    run_simulation,
-)
+from backend.services import SimulationParams, generate_synthetic_data, run_simulation
 
 ZONES = ["Bello", "Medellin"]
 
