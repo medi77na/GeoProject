@@ -1,9 +1,12 @@
 import React from "react";
 import { CircleMarker, LayerGroup, Popup, Tooltip } from "react-leaflet";
 
+import { UI_TEXTS_ES } from "../constants/texts_es";
 import { getZoneColor } from "./zone_styles";
 
-const formatPm = (value) => (typeof value === "number" ? `${value.toFixed(1)} μg/m³` : "n/a");
+const T = UI_TEXTS_ES;
+
+const formatPm = (value) => (typeof value === "number" ? `${value.toFixed(1)} μg/m³` : T.sections.kpis.notAvailable);
 
 export function PointsLayer({ points }) {
     if (!points || points.length === 0) return null;
@@ -13,7 +16,7 @@ export function PointsLayer({ points }) {
             {points.map((point, idx) => {
                 const radius = 6 + Math.min(10, Math.abs(point.pm25 ?? 0) / 4);
                 const color = getZoneColor(point.pm25);
-                const label = `PM2.5: ${formatPm(point.pm25)} • ${point.zone ?? ""} • t=${point.time_index ?? 0}`;
+                const label = `${T.metrics.pm}: ${formatPm(point.pm25)} • ${point.zone ?? T.map.pointFallback} • ${T.metrics.timeIndex}: ${point.time_index ?? 0}`;
                 return (
                     <CircleMarker
                         key={`${point.zone ?? "point"}-${idx}`}
@@ -31,9 +34,9 @@ export function PointsLayer({ points }) {
                         </Tooltip>
                         <Popup>
                             <div>
-                                <strong>{point.zone ?? "Zone point"}</strong>
+                                <strong>{point.zone ?? T.map.pointFallback}</strong>
                                 <div>{formatPm(point.pm25)}</div>
-                                <div>Time index: {point.time_index ?? 0}</div>
+                                <div>{`${T.metrics.timeIndex}: ${point.time_index ?? 0}`}</div>
                             </div>
                         </Popup>
                     </CircleMarker>

@@ -1,9 +1,12 @@
 import React from "react";
 import { GeoJSON } from "react-leaflet";
 
+import { UI_TEXTS_ES } from "../constants/texts_es";
 import { getZoneStyle } from "./zone_styles";
 
-const formatNumber = (value, decimals = 1, fallback = "n/a") => {
+const T = UI_TEXTS_ES;
+
+const formatNumber = (value, decimals = 1, fallback = T.sections.kpis.notAvailable) => {
     if (typeof value !== "number" || Number.isNaN(value)) return fallback;
     return value.toFixed(decimals);
 };
@@ -13,21 +16,21 @@ export function ZonesLayer({ geojson, metrics }) {
 
     const handleEachFeature = (feature, layer) => {
         const props = feature.properties ?? {};
-        const name = props.name ?? "Zone";
+        const name = props.name ?? T.map.zoneFallback;
         const avgPm25 = props.avg_pm25 ?? props.pollution;
         const trafficRel = props.traffic_rel ?? props.traffic;
 
         const pollutionLabel = `${formatNumber(avgPm25, 1)} μg/m³`;
-        const trafficLabel = `${formatNumber(trafficRel, 2)} rel.`;
-        const tooltip = `${name} • PM2.5: ${pollutionLabel} • Traffic: ${trafficLabel}`;
+        const trafficLabel = `${formatNumber(trafficRel, 2)} ${T.metrics.relative}`;
+        const tooltip = `${name} • ${T.metrics.pm}: ${pollutionLabel} • ${T.metrics.traffic}: ${trafficLabel}`;
 
         layer.bindTooltip(tooltip);
         layer.bindPopup(
             `
             <div>
                 <strong>${name}</strong><br/>
-                PM2.5 (avg): ${pollutionLabel}<br/>
-                Traffic (rel.): ${trafficLabel}
+                ${T.metrics.pm} (prom.): ${pollutionLabel}<br/>
+                ${T.metrics.traffic} ${T.metrics.relative}: ${trafficLabel}
             </div>
         `,
         );

@@ -1,10 +1,14 @@
 import React from "react";
 
+import { UI_TEXTS_ES } from "../constants/texts_es";
+
+const T = UI_TEXTS_ES;
+
 const severityStyles = {
-    low: { label: "Low", color: "#16a34a", background: "#dcfce7" },
-    moderate: { label: "Moderate", color: "#ca8a04", background: "#fef9c3" },
-    high: { label: "High", color: "#f97316", background: "#ffedd5" },
-    critical: { label: "Critical", color: "#dc2626", background: "#fee2e2" },
+    low: { label: T.severity.low, color: "#16a34a", background: "#dcfce7" },
+    moderate: { label: T.severity.moderate, color: "#ca8a04", background: "#fef9c3" },
+    high: { label: T.severity.high, color: "#f97316", background: "#ffedd5" },
+    critical: { label: T.severity.critical, color: "#dc2626", background: "#fee2e2" },
 };
 
 function SeverityBadge({ severity }) {
@@ -31,7 +35,7 @@ function SeverityBadge({ severity }) {
 
 function RecommendationList({ items = [] }) {
     if (!items || items.length === 0) return (
-        <div style={{ color: "#475569" }}>No recommended actions for this scenario.</div>
+        <div style={{ color: "#475569" }}>{T.recommendations.listEmpty}</div>
     );
     return (
         <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -47,7 +51,7 @@ function RecommendationList({ items = [] }) {
                 >
                     <div style={{ fontWeight: 700, color: "#0f172a" }}>{item.title}</div>
                     <div style={{ color: "#475569", marginTop: "4px", fontSize: "0.95rem" }}>{item.description}</div>
-                    <div style={{ color: "#94a3b8", fontSize: "0.9rem", marginTop: "6px" }}>Code: {item.code}</div>
+                    <div style={{ color: "#94a3b8", fontSize: "0.9rem", marginTop: "6px" }}>{`${T.recommendations.codeLabel}: ${item.code}`}</div>
                 </li>
             ))}
         </ul>
@@ -57,7 +61,7 @@ function RecommendationList({ items = [] }) {
 function KpiSummary({ summary = {} }) {
     const entries = Object.entries(summary ?? {});
     if (entries.length === 0) {
-        return <div style={{ color: "#94a3b8" }}>KPI summary unavailable.</div>;
+        return <div style={{ color: "#94a3b8" }}>{T.recommendations.kpiSummaryUnavailable}</div>;
     }
 
     return (
@@ -78,7 +82,7 @@ function KpiSummary({ summary = {} }) {
                     }}
                 >
                     <div style={{ color: "#64748b", fontSize: "0.9rem", textTransform: "uppercase", letterSpacing: "0.02em" }}>
-                        {key.replace(/_/g, " ")}
+                        {T.kpiLabels[key] ?? key.replace(/_/g, " ")}
                     </div>
                     <div style={{ fontWeight: 700, color: "#0f172a", fontSize: "1.1rem" }}>{Number.isFinite(value) ? value.toFixed(2) : String(value)}</div>
                 </div>
@@ -99,7 +103,7 @@ function Commentary({ text }) {
                 background: "#f8fafc",
             }}
         >
-            <div style={{ fontWeight: 700, marginBottom: "6px", color: "#0f172a" }}>AI commentary</div>
+            <div style={{ fontWeight: 700, marginBottom: "6px", color: "#0f172a" }}>{T.recommendations.aiCommentary}</div>
             <div style={{ color: "#475569" }}>{text}</div>
         </div>
     );
@@ -107,12 +111,14 @@ function Commentary({ text }) {
 
 function StatusMessage({ status, error }) {
     if (status === "loading") {
-        return <div style={{ color: "#2563eb", fontSize: "0.95rem" }}>Generating recommendations...</div>;
+        return <div style={{ color: "#2563eb", fontSize: "0.95rem" }}>{T.recommendations.statuses.loading}</div>;
     }
     if (status === "error") {
-        const friendlyError = (error || "").toLowerCase().includes("401")
-            ? "Access denied (401): verify your API key before requesting recommendations."
-            : error;
+        const normalizedError = (error || "").toLowerCase();
+        const is401 = normalizedError.includes("401") || error === T.errors.error401;
+        const friendlyError = is401
+            ? T.recommendations.statuses.error401
+            : (error || T.recommendations.statuses.errorGeneric);
         return (
             <div
                 style={{
@@ -124,12 +130,12 @@ function StatusMessage({ status, error }) {
                     fontSize: "0.95rem",
                 }}
             >
-                {friendlyError || "Could not retrieve recommendations. Please try again."}
+                {friendlyError}
             </div>
         );
     }
     if (status === "idle") {
-        return <div style={{ color: "#475569", fontSize: "0.95rem" }}>Run a simulation and request recommendations to see results here.</div>;
+        return <div style={{ color: "#475569", fontSize: "0.95rem" }}>{T.recommendations.statuses.idle}</div>;
     }
     if (status === "empty") {
         return (
@@ -144,7 +150,7 @@ function StatusMessage({ status, error }) {
                     fontSize: "0.95rem",
                 }}
             >
-                No restrictive measures required based on the current KPIs.
+                {T.recommendations.statuses.empty}
             </div>
         );
     }
@@ -171,8 +177,8 @@ function RecommendationsPanel({
         >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                 <div>
-                    <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" }}>Recommendations</div>
-                    <div style={{ color: "#475569" }}>Higher PM2.5 and congestion lead to stronger actions.</div>
+                    <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" }}>{T.recommendations.heading}</div>
+                    <div style={{ color: "#475569" }}>{T.recommendations.subtitle}</div>
                 </div>
                 {showContent && <SeverityBadge severity={recommendation?.severity} />}
             </div>
@@ -184,12 +190,12 @@ function RecommendationsPanel({
                     <RecommendationList items={recommendation.recommendations} />
 
                     <div>
-                        <div style={{ fontWeight: 700, marginBottom: "6px", color: "#0f172a" }}>Justification</div>
+                        <div style={{ fontWeight: 700, marginBottom: "6px", color: "#0f172a" }}>{T.recommendations.justification}</div>
                         <div style={{ color: "#475569" }}>{recommendation.justification}</div>
                     </div>
 
                     <div>
-                        <div style={{ fontWeight: 700, marginBottom: "6px", color: "#0f172a" }}>KPI summary</div>
+                        <div style={{ fontWeight: 700, marginBottom: "6px", color: "#0f172a" }}>{T.recommendations.kpiSummary}</div>
                         <KpiSummary summary={recommendation.kpi_summary} />
                     </div>
 
