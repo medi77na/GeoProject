@@ -1,6 +1,12 @@
 from fastapi import APIRouter, Body, HTTPException
 
-from backend.models import KNOWN_ZONES, SimulationRequest, SimulationResponse
+from backend.models import (
+    KNOWN_ZONES,
+    SimulationCompareRequest,
+    SimulationCompareResponse,
+    SimulationRequest,
+    SimulationResponse,
+)
 from backend.services import generate_synthetic_data, run_simulation
 from backend.services.contamination_layers import derive_map_ready_layers
 
@@ -67,6 +73,110 @@ SIMULATION_RESPONSE_EXAMPLE = {
         [6.3425, -75.5515, 1.0],
         [6.167, -75.583, 0.88],
     ],
+}
+
+SIMULATION_COMPARE_REQUEST_EXAMPLES = {
+    "abTest": {
+        "summary": "Baseline vs pico y placa + cargo restriction",
+        "description": (
+            "Runs two simulations at once. Scenario A keeps mild peak hours, "
+            "scenario B enables combined restrictions with adjusted traffic inputs."
+        ),
+        "value": {
+            "label_a": "Baseline A",
+            "label_b": "Mitigation B",
+            "scenario_a": {
+                "scenario": "A",
+                "zones_enabled": ["Bello", "Medellin"],
+                "duration_minutes": 180,
+                "time_step_minutes": 15,
+                "traffic_level": "medium",
+                "peak_hours": ["07:00-09:00", "17:00-19:00"],
+                "traffic_variation_by_hour": {"07:00": 1.15, "18:00": 1.05},
+            },
+            "scenario_b": {
+                "scenario": "B",
+                "zones_enabled": ["Bello", "Medellin"],
+                "duration_minutes": 180,
+                "time_step_minutes": 15,
+                "traffic_level": "medium",
+                "pico_placa_enabled": True,
+                "pico_placa_restriction_factor": 0.82,
+                "cargo_restriction_enabled": True,
+                "traffic_variation_by_hour": {"07:00": 1.05, "18:00": 0.98},
+            },
+        },
+    },
+    "heavyVsLight": {
+        "summary": "Compare heavy vehicle policy impacts",
+        "description": "Scenario B increases heavy vehicle share to contrast pollution footprints.",
+        "value": {
+            "scenario_a": {"scenario": "A", "zones": ["Envigado", "Itagui"], "traffic_level": "low"},
+            "scenario_b": {
+                "scenario": "B",
+                "zones": ["Envigado", "Itagui"],
+                "traffic_level": "high",
+                "heavy_vehicle_percentage": 0.25,
+                "wind_speed": 9.0,
+                "wind_direction": "SW",
+            },
+        },
+    },
+}
+
+SIMULATION_COMPARE_RESPONSE_EXAMPLE = {
+    "label_a": "Baseline A",
+    "label_b": "Mitigation B",
+    "result_a": {
+        "scenario": "A",
+        "zones": ["Bello", "Medellin"],
+        "time": [0, 15, 30, 45],
+        "traffic": {
+            "Bello": [0.38, 0.41, 0.44, 0.48],
+            "Medellin": [0.51, 0.55, 0.58, 0.6],
+        },
+        "pollution": {
+            "Bello": [22.1, 22.6, 23.0, 23.4],
+            "Medellin": [25.5, 26.2, 26.8, 27.1],
+        },
+        "zones_data": [
+            {"zone": "Bello", "avg_pm25": 22.8, "traffic_rel": 0.82},
+            {"zone": "Medellin", "avg_pm25": 26.4, "traffic_rel": 0.94},
+        ],
+        "points_data": [
+            {"lat": 6.338, "lon": -75.554, "pm25": 22.6, "zone": "Bello", "time_index": 1},
+            {"lat": 6.244, "lon": -75.581, "pm25": 26.2, "zone": "Medellin", "time_index": 1},
+        ],
+        "heatmap_data": [
+            [6.338, -75.554, 0.82],
+            [6.244, -75.581, 0.94],
+        ],
+    },
+    "result_b": {
+        "scenario": "B",
+        "zones": ["Bello", "Medellin"],
+        "time": [0, 15, 30, 45],
+        "traffic": {
+            "Bello": [0.34, 0.36, 0.39, 0.41],
+            "Medellin": [0.46, 0.49, 0.52, 0.55],
+        },
+        "pollution": {
+            "Bello": [20.2, 20.6, 20.9, 21.1],
+            "Medellin": [23.4, 23.9, 24.3, 24.7],
+        },
+        "zones_data": [
+            {"zone": "Bello", "avg_pm25": 20.7, "traffic_rel": 0.74},
+            {"zone": "Medellin", "avg_pm25": 24.1, "traffic_rel": 0.86},
+        ],
+        "points_data": [
+            {"lat": 6.338, "lon": -75.554, "pm25": 20.5, "zone": "Bello", "time_index": 1},
+            {"lat": 6.244, "lon": -75.581, "pm25": 23.9, "zone": "Medellin", "time_index": 1},
+        ],
+        "heatmap_data": [
+            [6.338, -75.554, 0.74],
+            [6.244, -75.581, 0.86],
+        ],
+    },
 }
 
 
@@ -139,3 +249,46 @@ def simulate(
     request: SimulationRequest = Body(..., examples=SIMULATION_REQUEST_EXAMPLES),
 ) -> SimulationResponse:
     return handle_simulation_request(request)
+
+
+@router.post(
+    "/compare",
+    response_model=SimulationCompareResponse,
+    summary="Run two simulations and return both results for comparison.",
+    description=(
+        "Executes the simulation engine twice using the same logic as `/api/v1/simulate`, "
+        "allowing the frontend to render side-by-side or overlay map comparisons for scenarios A and B."
+    ),
+    responses={
+        200: {
+            "description": "Comparison executed successfully.",
+            "content": {
+                "application/json": {
+                    "example": SIMULATION_COMPARE_RESPONSE_EXAMPLE
+                }
+            },
+        },
+        400: {
+            "description": "Simulation failed due to invalid configuration in one of the scenarios.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "time_step_minutes must be smaller than duration_minutes."}
+                }
+            },
+        },
+        422: {
+            "description": "Validation error in request payload.",
+        },
+    },
+)
+def simulate_compare(
+    request: SimulationCompareRequest = Body(..., examples=SIMULATION_COMPARE_REQUEST_EXAMPLES),
+) -> SimulationCompareResponse:
+    result_a = handle_simulation_request(request.scenario_a)
+    result_b = handle_simulation_request(request.scenario_b)
+    return SimulationCompareResponse(
+        result_a=result_a,
+        result_b=result_b,
+        label_a=request.label_a,
+        label_b=request.label_b,
+    )

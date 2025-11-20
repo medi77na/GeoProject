@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { MapContainer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -7,11 +7,12 @@ import { HeatmapLayer } from "./layers/heatmap_layer";
 import { PointsLayer } from "./layers/points_layer";
 import { ZonesLayer } from "./layers/zones_layer";
 import { attachMetricsToGeoJson, computeLatestMetricsFromSimulation, deriveLegendData } from "./utils_geo";
+import { useZonesGeoJson } from "./use_zones_geojson";
 
-const VALLE_CENTER = [6.24, -75.58];
-const DEFAULT_ZOOM = 11;
+export const VALLE_CENTER = [6.24, -75.58];
+export const DEFAULT_ZOOM = 11;
 
-function Legend({ items }) {
+export function Legend({ items }) {
     if (!items || items.length === 0) return null;
     return (
         <div
@@ -52,7 +53,7 @@ function Legend({ items }) {
     );
 }
 
-function MapStatus({ message }) {
+export function MapStatus({ message }) {
     return (
         <div
             style={{
@@ -69,7 +70,7 @@ function MapStatus({ message }) {
     );
 }
 
-function LayerToggles({
+export function LayerToggles({
     showZonesLayer,
     showPointsLayer,
     showHeatmapLayer,
@@ -120,43 +121,11 @@ function UrbanMap({
     tileLayer,
     height = 520,
 }) {
-    const [geojson, setGeojson] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
     const [showZonesLayer, setShowZonesLayer] = useState(true);
     const [showPointsLayer, setShowPointsLayer] = useState(true);
     const [showHeatmapLayer, setShowHeatmapLayer] = useState(false);
 
-    useEffect(() => {
-        let cancelled = false;
-        setLoading(true);
-        fetch("/api/v1/map/zones")
-            .then(async (response) => {
-                if (!response.ok) {
-                    throw new Error(`Failed to load zones (status ${response.status})`);
-                }
-                return response.json();
-            })
-            .then((data) => {
-                if (!cancelled) {
-                    setGeojson(data);
-                }
-            })
-            .catch((err) => {
-                if (!cancelled) {
-                    setError(err.message);
-                }
-            })
-            .finally(() => {
-                if (!cancelled) {
-                    setLoading(false);
-                }
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+    const { geojson, loading, error } = useZonesGeoJson();
 
     const latestFromSimulation = useMemo(
         () => computeLatestMetricsFromSimulation(simulationResult),
