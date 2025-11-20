@@ -1,4 +1,10 @@
-from fastapi import APIRouter, Body, Depends, HTTPException
+import time
+from typing import Dict
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
+
+from backend.core.logging_config import get_logger, log_error, log_request, log_result
+from backend.core.security import API_KEY_HEADER_NAME, get_api_key
 
 from backend.models import (
     KNOWN_ZONES,
@@ -9,7 +15,8 @@ from backend.models import (
 )
 from backend.services import generate_synthetic_data, run_simulation
 from backend.services.contamination_layers import derive_map_ready_layers
-from backend.core.security import get_api_key
+
+logger = get_logger(__name__)
 
 router = APIRouter(
     prefix="/simulate",
@@ -249,8 +256,31 @@ def handle_simulation_request(request: SimulationRequest) -> SimulationResponse:
 )
 def simulate(
     request: SimulationRequest = Body(..., examples=SIMULATION_REQUEST_EXAMPLES),
+    fastapi_request: Request,
 ) -> SimulationResponse:
-    return handle_simulation_request(request)
+    start = time.perf_counter()
+    endpoint_name = "/api/v1/simulate"
+    params_dict = request.model_dump(exclude_none=True)
+    api_key = fastapi_request.headers.get(API_KEY_HEADER_NAME)
+    log_request(logger, endpoint_name, params_dict, api_key)
+
+    try:
+        response = handle_simulation_request(request)
+    except Exception as exc:
+        log_error(logger, endpoint_name, exc)
+        raise
+
+    execution_ms = int((time.perf_counter() - start) * 1000)
+    summary: Dict[str, float | int | str] = {
+        "scenario": response.scenario,
+        "zones_count": len(response.zones),
+        "steps": len(response.time),
+    }
+    if response.pollution:
+        max_pm25 = max((max(values) for values in response.pollution.values()), default=0.0)
+        summary["max_pm25"] = round(max_pm25, 4)
+    log_result(logger, endpoint_name, execution_ms, summary)
+    return response
 
 
 @router.post(
@@ -285,12 +315,40 @@ def simulate(
 )
 def simulate_compare(
     request: SimulationCompareRequest = Body(..., examples=SIMULATION_COMPARE_REQUEST_EXAMPLES),
+    fastapi_request: Request,
 ) -> SimulationCompareResponse:
-    result_a = handle_simulation_request(request.scenario_a)
-    result_b = handle_simulation_request(request.scenario_b)
-    return SimulationCompareResponse(
-        result_a=result_a,
-        result_b=result_b,
-        label_a=request.label_a,
-        label_b=request.label_b,
-    )
+    start = time.perf_counter()
+    endpoint_name = "/api/v1/simulate/compare"
+    params_dict = request.model_dump(exclude_none=True)
+    api_key = fastapi_request.headers.get(API_KEY_HEADER_NAME)
+    log_request(logger, endpoint_name, params_dict, api_key)
+
+    try:
+        result_a = handle_simulation_request(request.scenario_a)
+        result_b = handle_simulation_request(request.scenario_b)
+        response = SimulationCompareResponse(
+            result_a=result_a,
+            result_b=result_b,
+            label_a=request.label_a,
+            label_b=request.label_b,
+        )
+    except Exception as exc:
+        log_error(logger, endpoint_name, exc)
+        raise
+
+    execution_ms = int((time.perf_counter() - start) * 1000)
+    summary: Dict[str, Dict[str, float | int | str]] = {}
+    for label, result in (("a", response.result_a), ("b", response.result_b)):
+        entry: Dict[str, float | int | str] = {
+            "scenario": result.scenario,
+            "zones_count": len(result.zones),
+            "steps": len(result.time),
+        }
+        if result.pollution:
+            entry["max_pm25"] = round(
+                max((max(values) for values in result.pollution.values()), default=0.0),
+                4,
+            )
+        summary[label] = entry
+    log_result(logger, endpoint_name, execution_ms, summary)
+    return response
