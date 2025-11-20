@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 
 from backend.api import api_router
+from backend.core.security import API_KEY_HEADER_NAME
 
 tags_metadata = [
     {
@@ -57,3 +59,32 @@ def health():
 
 
 app.include_router(api_router)
+
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+        tags=tags_metadata,
+    )
+
+    security_schemes = openapi_schema.setdefault("components", {}).setdefault("securitySchemes", {})
+    security_schemes.setdefault(
+        "APIKeyHeader",
+        {
+            "type": "apiKey",
+            "in": "header",
+            "name": API_KEY_HEADER_NAME,
+        },
+    )
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi

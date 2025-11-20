@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 
 from backend.models import (
     KNOWN_ZONES,
@@ -9,10 +9,12 @@ from backend.models import (
 )
 from backend.services import generate_synthetic_data, run_simulation
 from backend.services.contamination_layers import derive_map_ready_layers
+from backend.core.security import get_api_key
 
 router = APIRouter(
     prefix="/simulate",
     tags=["Simulation"],
+    dependencies=[Depends(get_api_key)],
 )
 
 SIMULATION_REQUEST_EXAMPLES = {
