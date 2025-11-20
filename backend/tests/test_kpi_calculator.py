@@ -1,3 +1,4 @@
+from backend.models import SimulationRequest
 from backend.services import (
     KPIResult,
     SimulationParams,
@@ -42,28 +43,36 @@ def test_kpis_basic_stats():
 
 def test_kpis_scenario_a_vs_b_congestion():
     zones = ["Bello", "Medellin"]
+    request_a = SimulationRequest(
+        scenario="A", zones=zones, traffic_level="medium", seed=123
+    )
+    request_b = request_a.copy(update={"scenario": "B"})
     synthetic_a = generate_synthetic_data(
         zones=zones,
-        horizon=24,
-        scenario="A",
-        traffic_level="medium",
-        seed=123,
+        horizon=request_a.total_steps(),
+        scenario=request_a.scenario,
+        traffic_level=request_a.traffic_level,
+        seed=request_a.seed,
     )
     synthetic_b = generate_synthetic_data(
         zones=zones,
-        horizon=24,
-        scenario="B",
-        traffic_level="medium",
-        seed=123,
+        horizon=request_b.total_steps(),
+        scenario=request_b.scenario,
+        traffic_level=request_b.traffic_level,
+        seed=request_b.seed,
     )
 
     params = SimulationParams()
 
     sim_a = run_simulation(
-        synthetic_data=synthetic_a, steps=24, scenario="A", params=params
+        request=request_a,
+        synthetic_data=synthetic_a,
+        params=params,
     )
     sim_b = run_simulation(
-        synthetic_data=synthetic_b, steps=24, scenario="B", params=params
+        request=request_b,
+        synthetic_data=synthetic_b,
+        params=params,
     )
 
     kpi_a = compute_kpis(simulation=sim_a, congestion_threshold=0.7)
