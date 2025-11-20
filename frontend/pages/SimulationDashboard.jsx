@@ -2,9 +2,12 @@ import React, { useMemo, useState } from "react";
 
 import ComparisonView from "../map/comparison_view";
 import UrbanMap from "../map";
-import { fetchRecommendations } from "../api/recommendationApi";
 import RecommendationsPanel from "../components/RecommendationsPanel";
-import { apiFetch } from "../api/client";
+import {
+    fetchRecommendations,
+    fetchSimulation,
+    fetchSimulationComparison,
+} from "../services/api_client";
 import { buildRecommendationRequest } from "./recommendationMapper";
 
 const DEFAULT_SIM_PAYLOAD = {
@@ -325,16 +328,6 @@ function SimulationDashboard({ backendUrl = "" }) {
         [backendUrl],
     );
 
-    const simulateUrl = useMemo(
-        () => `${baseApiUrl}/api/v1/simulate`,
-        [baseApiUrl],
-    );
-
-    const compareUrl = useMemo(
-        () => `${baseApiUrl}/api/v1/simulate/compare`,
-        [baseApiUrl],
-    );
-
     const buildScenarioPayload = (config) => ({
         ...DEFAULT_SIM_PAYLOAD,
         scenario: config.scenario,
@@ -400,25 +393,13 @@ function SimulationDashboard({ backendUrl = "" }) {
         };
 
         try {
-            const response = await apiFetch(simulateUrl, {
-                method: "POST",
-                body: JSON.stringify(payload),
-            });
-
-            if (!response.ok) {
-                const friendly = response.status === 401
-                    ? "Simulation failed: API key missing or invalid (401)."
-                    : `Simulation failed (status ${response.status}). Please retry.`;
-                throw new Error(friendly);
-            }
-
-            const data = await response.json();
+            const data = await fetchSimulation(payload, baseApiUrl);
             setSimulationResult(data);
             if (autoRecommend) {
                 await generateRecommendation(data);
             }
         } catch (err) {
-            setError(err.message);
+            setError(err.message || "Simulation failed. Please retry.");
             setSimulationResult(null);
             resetRecommendationState();
         } finally {
@@ -438,23 +419,11 @@ function SimulationDashboard({ backendUrl = "" }) {
         };
 
         try {
-            const response = await apiFetch(compareUrl, {
-                method: "POST",
-                body: JSON.stringify(payload),
-            });
-
-            if (!response.ok) {
-                const friendly = response.status === 401
-                    ? "Comparison failed: API key missing or invalid (401)."
-                    : `Comparison failed (status ${response.status}). Please check the parameters.`;
-                throw new Error(friendly);
-            }
-
-            const data = await response.json();
+            const data = await fetchSimulationComparison(payload, baseApiUrl);
             setComparisonResult(data);
             setActiveView("comparison");
         } catch (err) {
-            setComparisonError(err.message);
+            setComparisonError(err.message || "Comparison failed. Please retry.");
             setComparisonResult(null);
         } finally {
             setComparisonLoading(false);

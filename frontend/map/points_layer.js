@@ -1,7 +1,7 @@
 import React from "react";
 import { CircleMarker, LayerGroup, Popup, Tooltip } from "react-leaflet";
 
-import { getZoneColor } from "../zone_styles";
+import { getZoneColor } from "./zone_styles";
 
 const formatPm = (value) => (typeof value === "number" ? `${value.toFixed(1)} μg/m³` : "n/a");
 

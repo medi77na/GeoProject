@@ -1,3 +1,5 @@
+"""Application configuration using environment-backed settings."""
+
 from functools import lru_cache
 
 from pydantic import BaseSettings

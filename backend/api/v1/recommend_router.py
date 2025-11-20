@@ -5,8 +5,10 @@ from fastapi import APIRouter, Body, Depends, Request
 
 from backend.core.logging_config import get_logger, log_error, log_request, log_result
 from backend.core.security import API_KEY_HEADER_NAME, get_api_key
-
-from backend.models.recommendation_model import RecommendationRequest, RecommendationResponse
+from backend.models.recommendation_model import (
+    RecommendationRequest,
+    RecommendationResponse,
+)
 from backend.services.recommendation_service import build_recommendation_response
 
 logger = get_logger(__name__)

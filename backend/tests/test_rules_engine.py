@@ -1,5 +1,4 @@
-from backend.models import SimulationResponse
-from backend.services import KPIResult
+from backend.models import KPIResult, SimulationResponse
 from backend.services.rules_engine import generate_recommendations
 
 

@@ -193,7 +193,7 @@ def main() -> None:
             xaxis_title="Time step",
             yaxis_title="Traffic density ρ(t)",
         )
-        st.plotly_chart(fig_traffic, width='stretch')
+        st.plotly_chart(fig_traffic, width="stretch")
 
         fig_pollution = px.line(
             df_pollution,
@@ -207,7 +207,7 @@ def main() -> None:
             xaxis_title="Time step",
             yaxis_title="Pollution level C(t)",
         )
-        st.plotly_chart(fig_pollution, width='stretch')
+        st.plotly_chart(fig_pollution, width="stretch")
 
     st.header("Indicadores Clave del Escenario")
     sim_result = st.session_state.get("simulation_result")

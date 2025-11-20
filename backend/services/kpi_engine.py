@@ -1,23 +1,13 @@
-from dataclasses import dataclass
+"""KPI utilities built on top of simulation outputs."""
+
 from statistics import mean
-from typing import Dict, List
 
-from .simulation_engine import SimulationResult
-
-
-@dataclass
-class KPIResult:
-    scenario: str
-    zones: List[str]
-    traffic_index: Dict[str, float]
-    pollution_avg: Dict[str, float]
-    pollution_max: Dict[str, float]
-    congestion_index: Dict[str, float]
+from backend.models import KPIResult
+from backend.services.simulation_engine import SimulationResult
 
 
 def compute_kpis(
-    simulation: SimulationResult,
-    congestion_threshold: float = 0.7,
+    simulation: SimulationResult, congestion_threshold: float = 0.7
 ) -> KPIResult:
     """
     Compute simple KPIs per zone from a SimulationResult.
@@ -40,10 +30,10 @@ def compute_kpis(
         raise ValueError("congestion_threshold must be in (0, 1].")
 
     zones = sorted(simulation.traffic.keys())
-    traffic_index: Dict[str, float] = {}
-    pollution_avg: Dict[str, float] = {}
-    pollution_max: Dict[str, float] = {}
-    congestion_idx: Dict[str, float] = {}
+    traffic_index = {}
+    pollution_avg = {}
+    pollution_max = {}
+    congestion_idx = {}
 
     for zone in zones:
         if zone not in simulation.pollution:

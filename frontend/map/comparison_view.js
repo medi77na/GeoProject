@@ -5,9 +5,9 @@ import "leaflet/dist/leaflet.css";
 import "leaflet-side-by-side";
 
 import { BaseTileLayer, TrafficMarkers } from "./leaflet_layers";
-import { HeatmapLayer } from "./layers/heatmap_layer";
-import { PointsLayer } from "./layers/points_layer";
-import { ZonesLayer } from "./layers/zones_layer";
+import { HeatmapLayer } from "./heatmap_layer";
+import { PointsLayer } from "./points_layer";
+import { ZonesLayer } from "./zones_layer";
 import {
     DEFAULT_ZOOM,
     LayerToggles,

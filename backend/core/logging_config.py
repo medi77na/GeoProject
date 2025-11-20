@@ -68,7 +68,12 @@ def _hash_api_key(api_key: Optional[str]) -> Optional[str]:
     return hashlib.sha256(api_key.encode()).hexdigest()[:8]
 
 
-def log_request(logger: logging.Logger, endpoint: str, params: Dict[str, Any], api_key: Optional[str]) -> None:
+def log_request(
+    logger: logging.Logger,
+    endpoint: str,
+    params: Dict[str, Any],
+    api_key: Optional[str],
+) -> None:
     logger.info(
         {
             "timestamp": datetime.now(timezone.utc).isoformat(),

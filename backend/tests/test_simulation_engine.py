@@ -60,7 +60,9 @@ def test_higher_alpha_increases_pollution():
     low_alpha = SimulationParams(alpha=0.2, beta=0.3)
     high_alpha = SimulationParams(alpha=1.0, beta=0.3)
 
-    sim_low = run_simulation(request=request, synthetic_data=synthetic, params=low_alpha)
+    sim_low = run_simulation(
+        request=request, synthetic_data=synthetic, params=low_alpha
+    )
     sim_high = run_simulation(
         request=request, synthetic_data=synthetic, params=high_alpha
     )

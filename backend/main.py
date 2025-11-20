@@ -76,7 +76,9 @@ def custom_openapi():
         tags=tags_metadata,
     )
 
-    security_schemes = openapi_schema.setdefault("components", {}).setdefault("securitySchemes", {})
+    security_schemes = openapi_schema.setdefault("components", {}).setdefault(
+        "securitySchemes", {}
+    )
     security_schemes.setdefault(
         "APIKeyHeader",
         {

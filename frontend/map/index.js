@@ -3,9 +3,9 @@ import { MapContainer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
 import { BaseTileLayer, TrafficMarkers } from "./leaflet_layers";
-import { HeatmapLayer } from "./layers/heatmap_layer";
-import { PointsLayer } from "./layers/points_layer";
-import { ZonesLayer } from "./layers/zones_layer";
+import { HeatmapLayer } from "./heatmap_layer";
+import { PointsLayer } from "./points_layer";
+import { ZonesLayer } from "./zones_layer";
 import { attachMetricsToGeoJson, computeLatestMetricsFromSimulation, deriveLegendData } from "./utils_geo";
 import { useZonesGeoJson } from "./use_zones_geojson";
 

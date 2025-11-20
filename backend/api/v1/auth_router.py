@@ -1,3 +1,5 @@
+"""Authentication and system-related endpoints."""
+
 from fastapi import APIRouter
 
 router = APIRouter(tags=["System"])
