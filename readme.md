@@ -259,3 +259,44 @@ pytest
 ```
 
 If the GitHub Actions CI fails, run the same commands locally, fix any reported issues, and push the updates again.
+
+---
+
+## Docker Usage Guide
+
+This project is fully containerized using Docker and Docker Compose, allowing for a consistent and reproducible development environment.
+
+### Building and Running the Stack
+
+**First-time Build and Run:**
+To build the Docker images for both the backend and frontend services and start the containers, run:
+```bash
+docker compose up --build
+```
+
+**Starting and Stopping:**
+To start the services in the background (detached mode):
+```bash
+docker compose up -d
+```
+To stop the running services:
+```bash
+docker compose down
+```
+
+### Development Workflow
+
+When you make changes to the source code in the `backend/` or `frontend/` directories, you must rebuild the corresponding Docker image for the changes to take effect inside the container.
+
+1.  **Modify Code**: Make your changes to the project files.
+2.  **Rebuild and Run**: Use the `--build` flag to rebuild the images and restart the containers.
+    ```bash
+    docker compose up --build
+    ```
+3.  **Verify**: Check your changes by accessing the frontend at `http://localhost:8501`.
+
+### Important Notes for Contributors
+
+*   **Line Endings**: The `run_backend.sh` and `run_frontend.sh` scripts must use LF (Unix-style) line endings. The containers run a Linux-based OS, which does not interpret CRLF (Windows-style) endings correctly, leading to script execution errors. Please configure your Git client and code editor accordingly.
+
+*   **CI/CD Automation**: Pushing changes to the `main` branch automatically triggers a CI/CD pipeline. This pipeline builds the `backend` and `frontend` Docker images, tags them, and publishes them to a container registry, making them available for deployment.
