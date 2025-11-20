@@ -19,7 +19,8 @@ export function getZoneColor(pollutionValue) {
 export function getZoneStyle(feature, metrics) {
     const zoneName = feature?.properties?.name;
     const pollutionByZone = metrics?.pollutionByZone ?? {};
-    const pollutionValue = zoneName ? pollutionByZone[zoneName] : undefined;
+    const featurePollution = feature?.properties?.avg_pm25 ?? feature?.properties?.pollution;
+    const pollutionValue = featurePollution ?? (zoneName ? pollutionByZone[zoneName] : undefined);
 
     return {
         fillColor: getZoneColor(pollutionValue),
@@ -31,13 +32,35 @@ export function getZoneStyle(feature, metrics) {
     };
 }
 
-export function buildPollutionLegend() {
-    return POLLUTION_BUCKETS.map((bucket) => {
+function formatRangeLabel(bucket, minValue, maxValue) {
+    const hasValues = typeof minValue === "number" && typeof maxValue === "number";
+    if (!hasValues) {
         const suffix = bucket.max === Infinity ? "+" : `–${bucket.max}`;
+        return `${bucket.min}${suffix} μg/m³`;
+    }
+
+    const lower = Math.max(bucket.min, minValue);
+    const upperBound = bucket.max === Infinity ? maxValue : Math.min(bucket.max, maxValue);
+    if (upperBound < lower) {
+        const suffix = bucket.max === Infinity ? "+" : `–${bucket.max}`;
+        return `${bucket.min}${suffix} μg/m³`;
+    }
+    if (bucket.max === Infinity) {
+        return `${lower.toFixed(1)}+ μg/m³`;
+    }
+    return `${lower.toFixed(1)}–${upperBound.toFixed(1)} μg/m³`;
+}
+
+export function buildPollutionLegend(values = []) {
+    const hasValues = Array.isArray(values) && values.length > 0;
+    const minValue = hasValues ? Math.min(...values) : undefined;
+    const maxValue = hasValues ? Math.max(...values) : undefined;
+
+    return POLLUTION_BUCKETS.map((bucket) => {
         return {
             label: bucket.label,
             color: bucket.color,
-            rangeLabel: `${bucket.min}${suffix} μg/m³`,
+            rangeLabel: formatRangeLabel(bucket, minValue, maxValue),
         };
     });
 }

@@ -2,12 +2,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { MapContainer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
-import { BaseTileLayer, TrafficMarkers, ZoneLayer } from "./leaflet_layers";
-import { buildPollutionLegend } from "./zone_styles";
-import {
-    attachMetricsToGeoJson,
-    computeLatestMetricsFromSimulation,
-} from "./utils_geo";
+import { BaseTileLayer, TrafficMarkers } from "./leaflet_layers";
+import { HeatmapLayer } from "./layers/heatmap_layer";
+import { PointsLayer } from "./layers/points_layer";
+import { ZonesLayer } from "./layers/zones_layer";
+import { attachMetricsToGeoJson, computeLatestMetricsFromSimulation, deriveLegendData } from "./utils_geo";
 
 const VALLE_CENTER = [6.24, -75.58];
 const DEFAULT_ZOOM = 11;
@@ -70,6 +69,50 @@ function MapStatus({ message }) {
     );
 }
 
+function LayerToggles({
+    showZonesLayer,
+    showPointsLayer,
+    showHeatmapLayer,
+    onToggleZones,
+    onTogglePoints,
+    onToggleHeatmap,
+}) {
+    return (
+        <div
+            style={{
+                position: "absolute",
+                top: "12px",
+                left: "12px",
+                zIndex: 900,
+                background: "rgba(255,255,255,0.95)",
+                padding: "10px",
+                borderRadius: "6px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                fontSize: "0.9rem",
+                color: "#111827",
+            }}
+        >
+            <div style={{ fontWeight: 700, marginBottom: "6px" }}>Layers</div>
+            <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <input type="checkbox" checked={showZonesLayer} onChange={onToggleZones} />
+                Zones
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <input type="checkbox" checked={showPointsLayer} onChange={onTogglePoints} />
+                Points
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <input
+                    type="checkbox"
+                    checked={showHeatmapLayer}
+                    onChange={onToggleHeatmap}
+                />
+                Heatmap
+            </label>
+        </div>
+    );
+}
+
 function UrbanMap({
     simulationResult,
     pollutionByZone,
@@ -80,6 +123,9 @@ function UrbanMap({
     const [geojson, setGeojson] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [showZonesLayer, setShowZonesLayer] = useState(true);
+    const [showPointsLayer, setShowPointsLayer] = useState(true);
+    const [showHeatmapLayer, setShowHeatmapLayer] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -121,6 +167,7 @@ function UrbanMap({
         return {
             pollutionByZone: pollutionByZone ?? latestFromSimulation.pollutionByZone,
             trafficByZone: trafficByZone ?? latestFromSimulation.trafficByZone,
+            zoneDataByZone: latestFromSimulation.zoneDataByZone,
         };
     }, [pollutionByZone, trafficByZone, latestFromSimulation]);
 
@@ -129,7 +176,14 @@ function UrbanMap({
         return attachMetricsToGeoJson(geojson, metrics);
     }, [geojson, metrics]);
 
-    const legendModel = useMemo(() => buildPollutionLegend(), []);
+    const legendModel = useMemo(
+        () => deriveLegendData({
+            zonesData: latestFromSimulation.zonesData,
+            pointsData: latestFromSimulation.pointsData,
+            pollutionByZone: metrics.pollutionByZone,
+        }),
+        [latestFromSimulation, metrics],
+    );
 
     const hasSimulationData = useMemo(() => {
         return (
@@ -137,6 +191,7 @@ function UrbanMap({
             || (metrics.trafficByZone && Object.keys(metrics.trafficByZone).length > 0)
         );
     }, [metrics]);
+    const hasSimulationResult = Boolean(simulationResult);
 
     if (error) {
         return <MapStatus message={`Advanced map unavailable: ${error}`} />;
@@ -144,8 +199,8 @@ function UrbanMap({
 
     return (
         <div style={{ position: "relative" }}>
-            {!hasSimulationData && (
-                <MapStatus message="Run a simulation to display the advanced map." />
+            {!hasSimulationResult && (
+                <MapStatus message="Run a simulation to display the advanced layers." />
             )}
             {loading && <MapStatus message="Loading zones for the map..." />}
             <MapContainer
@@ -155,17 +210,35 @@ function UrbanMap({
                 style={{ height, width: "100%", borderRadius: "8px", overflow: "hidden" }}
             >
                 <BaseTileLayer tileLayer={tileLayer} />
+                <LayerToggles
+                    showZonesLayer={showZonesLayer}
+                    showPointsLayer={showPointsLayer}
+                    showHeatmapLayer={showHeatmapLayer}
+                    onToggleZones={() => setShowZonesLayer((value) => !value)}
+                    onTogglePoints={() => setShowPointsLayer((value) => !value)}
+                    onToggleHeatmap={() => setShowHeatmapLayer((value) => !value)}
+                />
                 {preparedGeoJson && (
                     <>
-                        <ZoneLayer geojson={preparedGeoJson} metrics={metrics} />
-                        <TrafficMarkers
-                            features={preparedGeoJson.features}
-                            trafficByZone={metrics.trafficByZone}
-                        />
+                        {showZonesLayer && (
+                            <ZonesLayer geojson={preparedGeoJson} metrics={metrics} />
+                        )}
+                        {showZonesLayer && (
+                            <TrafficMarkers
+                                features={preparedGeoJson.features}
+                                trafficByZone={metrics.trafficByZone}
+                            />
+                        )}
                     </>
                 )}
+                {hasSimulationData && showPointsLayer && (
+                    <PointsLayer points={latestFromSimulation.pointsData} />
+                )}
+                {hasSimulationData && showHeatmapLayer && (
+                    <HeatmapLayer heatmapData={latestFromSimulation.heatmapData} />
+                )}
             </MapContainer>
-            <Legend items={legendModel} />
+            <Legend items={legendModel.legend} />
         </div>
     );
 }
