@@ -190,6 +190,19 @@ print(kpis.pollution_avg)
 print(kpis.congestion_index)
 ```
 
+## KPI panel
+
+The Streamlit UI now renders a **“Indicadores Clave del Escenario”** section fed directly by the backend KPI service. The helper `compute_kpis_from_result(...)` in `frontend/app.py` wraps the JSON stored in `st.session_state["simulation_result"]` into a `SimulationResult` and calls `compute_kpis`, ensuring formulas stay centralized in `backend/services/kpi_calculator.py`.
+
+Each zone appears as a row showing:
+
+- traffic index (average traffic density ρ),
+- pollution average,
+- pollution maximum,
+- congestion index (fraction of time steps above the congestion threshold).
+
+The panel also adds qualitative levels (`Low`, `Medium`, `High`) for pollution and congestion, color-coded for quick scanning (green = low, yellow = medium, red = high). Whenever a new simulation completes, the KPI table refreshes automatically; if no simulation has run yet or KPI data is missing, the UI displays an informative message instead of an empty table.
+
 ## Code quality
 
 We use `ruff` for linting, `black` for formatting, `isort` for import ordering, and `pytest` for automated tests. Run all of them locally before pushing changes:
