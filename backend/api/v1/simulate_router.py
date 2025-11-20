@@ -2,6 +2,7 @@ from fastapi import APIRouter, Body, HTTPException
 
 from backend.models import KNOWN_ZONES, SimulationRequest, SimulationResponse
 from backend.services import generate_synthetic_data, run_simulation
+from backend.services.contamination_layers import derive_map_ready_layers
 
 router = APIRouter(
     prefix="/simulate",
@@ -52,6 +53,20 @@ SIMULATION_RESPONSE_EXAMPLE = {
         "Bello": [24.0, 24.8, 25.1, 25.4],
         "Envigado": [21.5, 22.0, 22.4, 22.6],
     },
+    "zones_data": [
+        {"zone": "Bello", "avg_pm25": 24.8, "traffic_rel": 0.95},
+        {"zone": "Envigado", "avg_pm25": 22.1, "traffic_rel": 0.87},
+    ],
+    "points_data": [
+        {"lat": 6.338, "lon": -75.554, "pm25": 24.8, "zone": "Bello", "time_index": 0},
+        {"lat": 6.3425, "lon": -75.5515, "pm25": 25.3, "zone": "Bello", "time_index": 1},
+        {"lat": 6.167, "lon": -75.583, "pm25": 22.2, "zone": "Envigado", "time_index": 0},
+    ],
+    "heatmap_data": [
+        [6.338, -75.554, 0.98],
+        [6.3425, -75.5515, 1.0],
+        [6.167, -75.583, 0.88],
+    ],
 }
 
 
@@ -72,6 +87,11 @@ def handle_simulation_request(request: SimulationRequest) -> SimulationResponse:
             request=request,
             synthetic_data=synthetic,
         )
+        zones_data, points_data, heatmap_data = derive_map_ready_layers(
+            zones=result.traffic.keys(),
+            pollution=result.pollution,
+            traffic=result.traffic,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -81,6 +101,9 @@ def handle_simulation_request(request: SimulationRequest) -> SimulationResponse:
         time=result.time,
         traffic=result.traffic,
         pollution=result.pollution,
+        zones_data=zones_data,
+        points_data=points_data,
+        heatmap_data=heatmap_data,
     )
 
 
@@ -91,7 +114,8 @@ def handle_simulation_request(request: SimulationRequest) -> SimulationResponse:
     description=(
         "Executes the simulation engine for Phase 1 and Phase 2 payloads, "
         "including advanced traffic, environmental, and policy parameters. "
-        "Returns per-zone time series for traffic density and pollution."
+        "Returns per-zone time series for traffic density and pollution plus map-ready "
+        "summaries (zones_data, points_data, heatmap_data) for the advanced Leaflet view."
     ),
     responses={
         200: {

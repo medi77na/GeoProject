@@ -287,3 +287,37 @@ class SimulationResponse(BaseModel):
     time: List[int]
     traffic: Dict[str, List[float]]
     pollution: Dict[str, List[float]]
+    zones_data: List["ZoneData"] = Field(
+        default_factory=list,
+        description="Per-zone summary metrics ready for map rendering.",
+    )
+    points_data: List["PointData"] = Field(
+        default_factory=list,
+        description="Synthetic point samples across zones with PM2.5 values.",
+    )
+    heatmap_data: List[List[float]] = Field(
+        default_factory=list,
+        description="Heatmap-friendly triplets [lat, lon, intensity] normalized to [0,1].",
+    )
+
+
+class ZoneData(BaseModel):
+    zone: str = Field(..., description="Zone identifier matching the GeoJSON name.")
+    avg_pm25: float = Field(..., description="Average PM2.5 during the simulation window.")
+    traffic_rel: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Relative traffic intensity normalized across the simulated zones.",
+    )
+
+
+class PointData(BaseModel):
+    lat: float = Field(..., description="Latitude of the sampled point.")
+    lon: float = Field(..., description="Longitude of the sampled point.")
+    pm25: float = Field(..., description="PM2.5 value at this location.")
+    zone: str = Field(..., description="Zone associated to the point.")
+    time_index: int = Field(..., ge=0, description="Time index used to derive the sample.")
+
+
+SimulationResponse.model_rebuild()
