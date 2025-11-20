@@ -2,6 +2,9 @@ import React, { useMemo, useState } from "react";
 
 import ComparisonView from "../map/comparison_view";
 import UrbanMap from "../map";
+import { fetchRecommendations } from "../api/recommendationApi";
+import RecommendationsPanel from "../components/RecommendationsPanel";
+import { buildRecommendationRequest } from "./recommendationMapper";
 
 const DEFAULT_SIM_PAYLOAD = {
     scenario: "B",
@@ -134,6 +137,11 @@ function SimulationDashboard({ backendUrl = "" }) {
     const [comparisonLoading, setComparisonLoading] = useState(false);
     const [comparisonError, setComparisonError] = useState(null);
     const [activeView, setActiveView] = useState("single");
+    const [recommendation, setRecommendation] = useState(null);
+    const [recommendationStatus, setRecommendationStatus] = useState("idle");
+    const [recommendationError, setRecommendationError] = useState(null);
+    const [useLlm, setUseLlm] = useState(false);
+    const [autoRecommend, setAutoRecommend] = useState(false);
 
     const resolveHorizon = (value) => {
         const numeric = Number(value ?? DEFAULT_SIM_PAYLOAD.horizon);
@@ -159,15 +167,20 @@ function SimulationDashboard({ backendUrl = "" }) {
         );
     }, [simulationResult]);
 
-    const simulateUrl = useMemo(() => {
-        const base = backendUrl?.replace(/\/$/, "") ?? "";
-        return `${base}/api/v1/simulate`;
-    }, [backendUrl]);
+    const baseApiUrl = useMemo(
+        () => (backendUrl ?? "").replace(/\/$/, ""),
+        [backendUrl],
+    );
 
-    const compareUrl = useMemo(() => {
-        const base = backendUrl?.replace(/\/$/, "") ?? "";
-        return `${base}/api/v1/simulate/compare`;
-    }, [backendUrl]);
+    const simulateUrl = useMemo(
+        () => `${baseApiUrl}/api/v1/simulate`,
+        [baseApiUrl],
+    );
+
+    const compareUrl = useMemo(
+        () => `${baseApiUrl}/api/v1/simulate/compare`,
+        [baseApiUrl],
+    );
 
     const buildScenarioPayload = (config) => ({
         ...DEFAULT_SIM_PAYLOAD,
@@ -178,10 +191,45 @@ function SimulationDashboard({ backendUrl = "" }) {
         cargo_restriction_enabled: Boolean(config.cargo_restriction_enabled),
     });
 
+    const resetRecommendationState = () => {
+        setRecommendation(null);
+        setRecommendationStatus("idle");
+        setRecommendationError(null);
+    };
+
+    const generateRecommendation = async (resultOverride = null) => {
+        const sourceResult = resultOverride ?? simulationResult;
+        if (!sourceResult) {
+            setRecommendationStatus("idle");
+            setRecommendationError("Run a simulation first to generate recommendations.");
+            return;
+        }
+
+        const payload = buildRecommendationRequest(sourceResult, useLlm);
+        if (!payload) {
+            setRecommendationStatus("idle");
+            setRecommendationError("Simulation data is incomplete for recommendations.");
+            return;
+        }
+
+        setRecommendationStatus("loading");
+        setRecommendationError(null);
+        try {
+            const data = await fetchRecommendations(payload, baseApiUrl);
+            setRecommendation(data);
+            const hasActions = Array.isArray(data.recommendations) && data.recommendations.length > 0;
+            setRecommendationStatus(hasActions ? "ready" : "empty");
+        } catch (err) {
+            setRecommendationStatus("error");
+            setRecommendationError(err.message || "Failed to generate recommendations.");
+        }
+    };
+
     const runSimulation = async () => {
         setError(null);
         setLoading(true);
         setActiveView("single");
+        resetRecommendationState();
 
         const payload = {
             ...DEFAULT_SIM_PAYLOAD,
@@ -203,9 +251,13 @@ function SimulationDashboard({ backendUrl = "" }) {
 
             const data = await response.json();
             setSimulationResult(data);
+            if (autoRecommend) {
+                await generateRecommendation(data);
+            }
         } catch (err) {
             setError(err.message);
             setSimulationResult(null);
+            resetRecommendationState();
         } finally {
             setLoading(false);
         }
@@ -351,6 +403,40 @@ function SimulationDashboard({ backendUrl = "" }) {
                         {simulationResult.time?.length ?? 0}
                     </div>
                 )}
+                <div style={{ marginTop: "14px", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <input
+                            type="checkbox"
+                            checked={useLlm}
+                            onChange={(event) => setUseLlm(event.target.checked)}
+                        />
+                        Use AI commentary (LLM)
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <input
+                            type="checkbox"
+                            checked={autoRecommend}
+                            onChange={(event) => setAutoRecommend(event.target.checked)}
+                        />
+                        Simulate and recommend automatically
+                    </label>
+                    <button
+                        type="button"
+                        onClick={() => generateRecommendation()}
+                        disabled={recommendationStatus === "loading" || !simulationResult}
+                        style={{
+                            padding: "8px 14px",
+                            background: "#0f172a",
+                            color: "white",
+                            borderRadius: "6px",
+                            border: "none",
+                            cursor: recommendationStatus === "loading" || !simulationResult ? "not-allowed" : "pointer",
+                            opacity: recommendationStatus === "loading" || !simulationResult ? 0.7 : 1,
+                        }}
+                    >
+                        {recommendationStatus === "loading" ? "Generating..." : "Generate recommendation"}
+                    </button>
+                </div>
             </section>
 
             <section
@@ -436,6 +522,28 @@ function SimulationDashboard({ backendUrl = "" }) {
                         Comparison ready: A = {resolvedLabelA} • B = {resolvedLabelB} (steps {comparisonResult.result_a?.time?.length ?? "?"})
                     </div>
                 )}
+            </section>
+
+            <section
+                style={{
+                    background: "#f8fafc",
+                    border: "1px solid #e5e7eb",
+                    padding: "16px",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                }}
+            >
+                <div style={{ marginBottom: "10px" }}>
+                    <h2 style={{ margin: 0 }}>Recommendations</h2>
+                    <p style={{ margin: "4px 0 0 0", color: "#475569" }}>
+                        Transform the latest simulation KPIs into rule-based actions. Severity is driven by PM2.5 and congestion.
+                    </p>
+                </div>
+                <RecommendationsPanel
+                    recommendation={recommendation}
+                    status={recommendationStatus}
+                    error={recommendationError}
+                />
             </section>
 
             <section>
