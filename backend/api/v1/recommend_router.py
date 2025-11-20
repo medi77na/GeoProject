@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, Depends
 
 from backend.models.recommendation_model import RecommendationRequest, RecommendationResponse
 from backend.services.recommendation_service import build_recommendation_response
+from backend.core.security import get_api_key
 
 router = APIRouter(
     prefix="/recommend",
     tags=["Recommendations"],
+    dependencies=[Depends(get_api_key)],
 )
 
 RECOMMEND_REQUEST_EXAMPLES = {

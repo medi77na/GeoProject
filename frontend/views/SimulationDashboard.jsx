@@ -4,6 +4,7 @@ import ComparisonView from "../map/comparison_view";
 import UrbanMap from "../map";
 import { fetchRecommendations } from "../api/recommendationApi";
 import RecommendationsPanel from "../components/RecommendationsPanel";
+import { apiFetch } from "../api/client";
 import { buildRecommendationRequest } from "./recommendationMapper";
 
 const DEFAULT_SIM_PAYLOAD = {
@@ -239,9 +240,8 @@ function SimulationDashboard({ backendUrl = "" }) {
         };
 
         try {
-            const response = await fetch(simulateUrl, {
+            const response = await apiFetch(simulateUrl, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
 
@@ -275,9 +275,8 @@ function SimulationDashboard({ backendUrl = "" }) {
         };
 
         try {
-            const response = await fetch(compareUrl, {
+            const response = await apiFetch(compareUrl, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
 
