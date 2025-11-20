@@ -320,4 +320,50 @@ class PointData(BaseModel):
     time_index: int = Field(..., ge=0, description="Time index used to derive the sample.")
 
 
+class SimulationCompareRequest(BaseModel):
+    """Incoming payload used by /simulate/compare."""
+
+    scenario_a: SimulationRequest = Field(
+        ...,
+        description="Configuration for scenario A.",
+        examples=[SimulationRequest.model_config["json_schema_extra"]["examples"][0]],
+    )
+    scenario_b: SimulationRequest = Field(
+        ...,
+        description="Configuration for scenario B.",
+        examples=[SimulationRequest.model_config["json_schema_extra"]["examples"][1]],
+    )
+    label_a: Optional[str] = Field(
+        default=None,
+        description="Optional label to display for scenario A in comparison views.",
+        examples=["Baseline"],
+    )
+    label_b: Optional[str] = Field(
+        default=None,
+        description="Optional label to display for scenario B in comparison views.",
+        examples=["Pico y placa + cargo restriction"],
+    )
+
+
+class SimulationCompareResponse(BaseModel):
+    """Response payload aggregating two independent simulation runs."""
+
+    result_a: SimulationResponse = Field(
+        ...,
+        description="Simulation output for scenario A.",
+    )
+    result_b: SimulationResponse = Field(
+        ...,
+        description="Simulation output for scenario B.",
+    )
+    label_a: Optional[str] = Field(
+        default=None,
+        description="Optional label returned for scenario A (mirrors request when provided).",
+    )
+    label_b: Optional[str] = Field(
+        default=None,
+        description="Optional label returned for scenario B (mirrors request when provided).",
+    )
+
+
 SimulationResponse.model_rebuild()
