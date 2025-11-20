@@ -1,10 +1,9 @@
 from fastapi import APIRouter, HTTPException
 
-from backend.models import SimulationRequest, SimulationResponse
+from backend.models import KNOWN_ZONES, SimulationRequest, SimulationResponse
 from backend.services import generate_synthetic_data, run_simulation
 
 router = APIRouter(prefix="/api/v1")
-DEFAULT_ZONES = ["Bello", "Medellin", "Envigado", "Itagui"]
 
 
 @router.get("/ping")
@@ -15,7 +14,7 @@ def ping():
 @router.post("/simulate", response_model=SimulationResponse)
 def simulate(request: SimulationRequest) -> SimulationResponse:
     try:
-        zones = request.resolved_zones(DEFAULT_ZONES)
+        zones = request.resolved_zones(KNOWN_ZONES)
         steps = request.total_steps()
 
         synthetic = generate_synthetic_data(
