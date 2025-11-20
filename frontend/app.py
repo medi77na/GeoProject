@@ -1,5 +1,12 @@
 import os
+import sys
+from dataclasses import asdict
 from typing import Any, Dict, Optional
+
+# Add the project root to the Python path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 import folium
 import pandas as pd
@@ -7,6 +14,12 @@ import plotly.express as px
 import requests
 import streamlit as st
 from streamlit_folium import st_folium
+
+from backend.services import (
+    KPIResult,
+    SimulationResult,
+    compute_kpis,
+)
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 SIMULATE_PATH = "/api/v1/simulate"
@@ -17,6 +30,34 @@ def call_simulate_api(payload: Dict[str, Any]) -> Dict[str, Any]:
     response = requests.post(url, json=payload, timeout=15)
     response.raise_for_status()
     return response.json()
+
+
+def compute_kpis_from_result(result: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+    Adapt the JSON simulation result returned by /api/v1/simulate into
+    a SimulationResult and compute KPIs using the backend service.
+    Returns a plain dict (asdict(KPIResult)) or None if data is incomplete.
+    """
+    if not result:
+        return None
+
+    time = result.get("time")
+    traffic = result.get("traffic")
+    pollution = result.get("pollution")
+    scenario = result.get("scenario", "A")
+
+    if not time or not traffic or not pollution:
+        return None
+
+    sim = SimulationResult(
+        time=time,
+        traffic=traffic,
+        pollution=pollution,
+        scenario=scenario,
+    )
+
+    kpi_result: KPIResult = compute_kpis(simulation=sim)
+    return asdict(kpi_result)
 
 
 if "simulation_result" not in st.session_state:
@@ -167,6 +208,101 @@ def main() -> None:
             yaxis_title="Pollution level C(t)",
         )
         st.plotly_chart(fig_pollution, use_container_width=True)
+
+    st.header("Indicadores Clave del Escenario")
+    sim_result = st.session_state.get("simulation_result")
+    if not sim_result:
+        st.info("Run a simulation to see the KPI panel.")
+    else:
+        kpis_dict = compute_kpis_from_result(sim_result)
+        if not kpis_dict:
+            st.error("Simulation result is incomplete. KPIs cannot be computed.")
+        else:
+            zones = kpis_dict.get("zones", [])
+            traffic_index = kpis_dict.get("traffic_index", {})
+            pollution_avg = kpis_dict.get("pollution_avg", {})
+            pollution_max = kpis_dict.get("pollution_max", {})
+            congestion_index = kpis_dict.get("congestion_index", {})
+
+            if not zones:
+                st.error("No KPI data available.")
+            else:
+                rows = []
+                for z in zones:
+                    rows.append(
+                        {
+                            "Zone": z,
+                            "Traffic index (avg ρ)": float(traffic_index.get(z, 0.0)),
+                            "Pollution avg": float(pollution_avg.get(z, 0.0)),
+                            "Pollution max": float(pollution_max.get(z, 0.0)),
+                            "Congestion index": float(congestion_index.get(z, 0.0)),
+                        }
+                    )
+
+                df_kpis = pd.DataFrame(rows)
+
+                if df_kpis.empty:
+                    st.warning("No KPI rows to display.")
+                else:
+
+                    def classify_level_pollution(value: float, max_val: float):
+                        if max_val <= 0:
+                            return "Low"
+                        ratio = value / max_val
+                        if ratio < 0.33:
+                            return "Low"
+                        elif ratio < 0.66:
+                            return "Medium"
+                        return "High"
+
+                    def classify_level_congestion(value: float):
+                        # value in [0, 1]
+                        if value < 0.33:
+                            return "Low"
+                        elif value < 0.66:
+                            return "Medium"
+                        return "High"
+
+                    max_pollution_max = df_kpis["Pollution max"].max() if not df_kpis.empty else 0.0
+
+                    pollution_levels = []
+                    congestion_levels = []
+                    for _, row in df_kpis.iterrows():
+                        p_level = classify_level_pollution(row["Pollution max"], max_pollution_max)
+                        c_level = classify_level_congestion(row["Congestion index"])
+                        pollution_levels.append(p_level)
+                        congestion_levels.append(c_level)
+
+                    df_kpis["Pollution level"] = pollution_levels
+                    df_kpis["Congestion level"] = congestion_levels
+
+                    df_kpis = df_kpis[
+                        [
+                            "Zone",
+                            "Traffic index (avg ρ)",
+                            "Pollution avg",
+                            "Pollution max",
+                            "Pollution level",
+                            "Congestion index",
+                            "Congestion level",
+                        ]
+                    ]
+
+                    def highlight_row(row):
+                        levels = {row["Pollution level"], row["Congestion level"]}
+                        if "High" in levels:
+                            color = "#e74c3c"  # red
+                        elif "Medium" in levels:
+                            color = "#f1c40f"  # yellow
+                        else:
+                            color = "#2ecc71"  # green
+                        return [f"background-color: {color}"] * len(row)
+
+                    st.dataframe(df_kpis.style.apply(highlight_row, axis=1))
+                    st.caption(
+                        "Colors indicate qualitative levels: green = low, yellow = medium, red = high "
+                        "based on relative pollution and congestion indices."
+                    )
 
     st.header("Pollution map – Valle de Aburrá")
     result = st.session_state.get("simulation_result")
