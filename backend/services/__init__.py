@@ -3,6 +3,7 @@ from .simulation_engine import SimulationParams, SimulationResult, run_simulatio
 from .map_layers import get_zones_geojson
 from .contamination_layers import derive_map_ready_layers
 from .synthetic_data import SyntheticDataResult, generate_synthetic_data
+from .rules_engine import generate_recommendations
 
 __all__ = [
     "KPIResult",
@@ -14,4 +15,5 @@ __all__ = [
     "generate_synthetic_data",
     "get_zones_geojson",
     "derive_map_ready_layers",
+    "generate_recommendations",
 ]
