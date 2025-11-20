@@ -1,0 +1,39 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+*.egg-info/
+pip-cache/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.idea/
+.vscode/
+
+# Logs
+*.log
+logs/
+
+# Documentation & Build artifacts
+docs/
+.github/
+*.md
+*.sh
+*.bat
+pytest.ini
+.pytest_cache/
+Dockerfile.backend
+Dockerfile.frontend
+docker-compose.yml
+.dockerignore
