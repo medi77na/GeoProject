@@ -7,7 +7,16 @@ from .simulation import (
     SimulationResponse,
     ZoneData,
 )
-from .recommendation_model import RecommendationItem, RecommendationResult, SeverityLevel
+from .recommendation_model import (
+    RecommendationContext,
+    RecommendationItem,
+    RecommendationKpis,
+    RecommendationKpiZone,
+    RecommendationRequest,
+    RecommendationResponse,
+    RecommendationResult,
+    SeverityLevel,
+)
 
 __all__ = [
     "SimulationRequest",
@@ -18,6 +27,11 @@ __all__ = [
     "ZoneData",
     "PointData",
     "RecommendationItem",
+    "RecommendationKpiZone",
+    "RecommendationKpis",
+    "RecommendationContext",
+    "RecommendationRequest",
+    "RecommendationResponse",
     "RecommendationResult",
     "SeverityLevel",
 ]

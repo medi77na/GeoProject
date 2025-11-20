@@ -1,4 +1,4 @@
-from typing import Dict, List, Literal
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -32,4 +32,93 @@ class RecommendationResult(BaseModel):
     kpi_summary: Dict[str, float] = Field(
         default_factory=dict,
         description="Compact numeric snapshot of key KPIs (e.g. avg/max PM2.5, congestion).",
+    )
+
+
+class RecommendationKpiZone(BaseModel):
+    name: str = Field(..., description="Zone name matching the simulation output.", examples=["Bello"])
+    pm25: float = Field(..., description="PM2.5 concentration for the zone.", examples=[68.0])
+    congestion: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Relative congestion index for the zone in [0,1].",
+        examples=[0.82],
+    )
+
+
+class RecommendationKpis(BaseModel):
+    pm25_max: float = Field(..., description="Maximum PM2.5 observed among all zones.", examples=[72.5])
+    pm25_avg: float = Field(..., description="Average PM2.5 across all zones.", examples=[48.3])
+    congestion_index: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Overall congestion index (fraction of congested time).",
+        examples=[0.71],
+    )
+    zones: List[RecommendationKpiZone] = Field(
+        default_factory=list,
+        description="Per-zone KPI snapshot used by the rules engine.",
+        examples=[[{"name": "Bello", "pm25": 72.5, "congestion": 0.85}]],
+    )
+
+
+class RecommendationContext(BaseModel):
+    scenario_name: Optional[str] = Field(
+        default=None,
+        description="Optional scenario label (A/B or a descriptive name).",
+        examples=["B"],
+    )
+    wind_speed: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        description="Wind speed in meters per second at the time of KPI capture.",
+        examples=[1.8],
+    )
+    wind_direction: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=360.0,
+        description="Wind direction in degrees (0-360).",
+        examples=[220.0],
+    )
+    temperature: Optional[float] = Field(
+        default=None,
+        description="Ambient temperature in Celsius when KPIs were collected.",
+        examples=[26.0],
+    )
+
+
+class RecommendationRequest(BaseModel):
+    kpis: RecommendationKpis = Field(..., description="Aggregated KPIs from a simulation run.")
+    context: Optional[RecommendationContext] = Field(
+        default=None,
+        description="Additional environmental context related to the KPI snapshot.",
+    )
+    use_llm: bool = Field(
+        default=False,
+        description="Whether to request an optional AI-generated commentary (if configured).",
+        examples=[True],
+    )
+
+
+class RecommendationResponse(BaseModel):
+    severity: SeverityLevel = Field(..., description="Overall severity driven by KPIs.")
+    recommendations: List[RecommendationItem] = Field(
+        default_factory=list,
+        description="List of prioritized actions returned by the rules engine.",
+    )
+    justification: str = Field(
+        ...,
+        description="Summary explaining why each recommendation was produced.",
+    )
+    kpi_summary: Dict[str, float] = Field(
+        default_factory=dict,
+        description="Numeric KPI summary used to derive the recommendations.",
+    )
+    llm_commentary: Optional[str] = Field(
+        default=None,
+        description="Optional explanatory text from the AI model when enabled.",
+        examples=["Low wind and high PM2.5 triggered stricter restrictions around Bello."],
     )
