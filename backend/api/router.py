@@ -1,42 +1,24 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
-from backend.models import KNOWN_ZONES, SimulationRequest, SimulationResponse
-from backend.services import generate_synthetic_data, run_simulation
+from backend.api.v1 import router as api_v1_router
+from backend.api.v1.simulate_router import handle_simulation_request
+from backend.models import SimulationRequest, SimulationResponse
 
-router = APIRouter(prefix="/api/v1")
+router = APIRouter()
+router.include_router(api_v1_router)
+
+legacy_router = APIRouter(tags=["Simulation"])
 
 
-@router.get("/ping")
-def ping():
-    return {"message": "pong", "scope": "api/v1"}
+@legacy_router.post(
+    "/simulate",
+    response_model=SimulationResponse,
+    deprecated=True,
+    summary="(Deprecated) Run simulation via legacy path",
+    description="Use `/api/v1/simulate` instead. This shim exists for backward compatibility.",
+)
+def simulate_legacy(request: SimulationRequest) -> SimulationResponse:
+    return handle_simulation_request(request)
 
 
-@router.post("/simulate", response_model=SimulationResponse)
-def simulate(request: SimulationRequest) -> SimulationResponse:
-    try:
-        zones = request.resolved_zones(KNOWN_ZONES)
-        steps = request.total_steps()
-
-        synthetic = generate_synthetic_data(
-            zones=zones,
-            horizon=steps,
-            scenario=request.scenario,
-            traffic_level=request.traffic_level,
-            seed=request.seed,
-        )
-
-        result = run_simulation(
-            request=request,
-            synthetic_data=synthetic,
-        )
-
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    return SimulationResponse(
-        scenario=result.scenario,
-        zones=list(result.traffic.keys()),
-        time=result.time,
-        traffic=result.traffic,
-        pollution=result.pollution,
-    )
+router.include_router(legacy_router)
