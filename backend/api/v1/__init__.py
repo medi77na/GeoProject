@@ -1,14 +1,14 @@
 from fastapi import APIRouter
 
-from .simulate_router import router as simulate_router
-from .system_router import router as system_router
-from .map_router import router as map_router
-from .recommend_router import router as recommend_router
+from backend.core.versioning import API_V1_PREFIX
 
-router = APIRouter(prefix="/api/v1")
-router.include_router(system_router)
+from .auth_router import router as auth_router
+from .recommend_router import router as recommend_router
+from .simulate_router import router as simulate_router
+
+router = APIRouter(prefix=API_V1_PREFIX)
+router.include_router(auth_router)
 router.include_router(simulate_router)
-router.include_router(map_router)
 router.include_router(recommend_router)
 
 __all__ = ["router"]

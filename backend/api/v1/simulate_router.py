@@ -5,20 +5,21 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request
 
 from backend.core.logging_config import get_logger, log_error, log_request, log_result
 from backend.core.security import API_KEY_HEADER_NAME, get_api_key
-
 from backend.models import (
-    KNOWN_ZONES,
     SimulationCompareRequest,
     SimulationCompareResponse,
     SimulationRequest,
     SimulationResponse,
 )
-from backend.services import generate_synthetic_data, run_simulation
-from backend.services.contamination_layers import derive_map_ready_layers
+from backend.services import (
+    compare_simulations,
+    execute_simulation,
+    get_zones_geojson,
+)
 
 logger = get_logger(__name__)
 
-router = APIRouter(
+simulation_router = APIRouter(
     prefix="/simulate",
     tags=["Simulation"],
     dependencies=[Depends(get_api_key)],
@@ -189,44 +190,8 @@ SIMULATION_COMPARE_RESPONSE_EXAMPLE = {
 }
 
 
-def handle_simulation_request(request: SimulationRequest) -> SimulationResponse:
-    try:
-        zones = request.resolved_zones(KNOWN_ZONES)
-        steps = request.total_steps()
 
-        synthetic = generate_synthetic_data(
-            zones=zones,
-            horizon=steps,
-            scenario=request.scenario,
-            traffic_level=request.traffic_level,
-            seed=request.seed,
-        )
-
-        result = run_simulation(
-            request=request,
-            synthetic_data=synthetic,
-        )
-        zones_data, points_data, heatmap_data = derive_map_ready_layers(
-            zones=result.traffic.keys(),
-            pollution=result.pollution,
-            traffic=result.traffic,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    return SimulationResponse(
-        scenario=result.scenario,
-        zones=list(result.traffic.keys()),
-        time=result.time,
-        traffic=result.traffic,
-        pollution=result.pollution,
-        zones_data=zones_data,
-        points_data=points_data,
-        heatmap_data=heatmap_data,
-    )
-
-
-@router.post(
+@simulation_router.post(
     "",
     response_model=SimulationResponse,
     summary="Run a traffic and pollution simulation for a given scenario.",
@@ -265,7 +230,10 @@ def simulate(
     log_request(logger, endpoint_name, params_dict, api_key)
 
     try:
-        response = handle_simulation_request(request)
+        response = execute_simulation(request)
+    except ValueError as exc:
+        log_error(logger, endpoint_name, exc)
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         log_error(logger, endpoint_name, exc)
         raise
@@ -283,7 +251,30 @@ def simulate(
     return response
 
 
-@router.post(
+map_router = APIRouter(
+    prefix="/map",
+    tags=["Map"],
+)
+
+
+@map_router.get(
+    "/zones",
+    summary="Base geometries for Valle de Aburrá zones",
+    description=(
+        "Returns simplified GeoJSON polygons for the core simulation zones. "
+        "Intended for frontend mapping layers; geometries are not survey-grade."
+    ),
+)
+def list_zones():
+    return get_zones_geojson()
+
+
+router = APIRouter()
+router.include_router(simulation_router)
+router.include_router(map_router)
+
+
+@simulation_router.post(
     "/compare",
     response_model=SimulationCompareResponse,
     summary="Run two simulations and return both results for comparison.",
@@ -324,14 +315,10 @@ def simulate_compare(
     log_request(logger, endpoint_name, params_dict, api_key)
 
     try:
-        result_a = handle_simulation_request(request.scenario_a)
-        result_b = handle_simulation_request(request.scenario_b)
-        response = SimulationCompareResponse(
-            result_a=result_a,
-            result_b=result_b,
-            label_a=request.label_a,
-            label_b=request.label_b,
-        )
+        response = compare_simulations(request)
+    except ValueError as exc:
+        log_error(logger, endpoint_name, exc)
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         log_error(logger, endpoint_name, exc)
         raise

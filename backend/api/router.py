@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 
 from backend.api.v1 import router as api_v1_router
-from backend.api.v1.simulate_router import handle_simulation_request
 from backend.models import SimulationRequest, SimulationResponse
+from backend.services import execute_simulation
 
 router = APIRouter()
 router.include_router(api_v1_router)
@@ -18,7 +18,7 @@ legacy_router = APIRouter(tags=["Simulation"])
     description="Use `/api/v1/simulate` instead. This shim exists for backward compatibility.",
 )
 def simulate_legacy(request: SimulationRequest) -> SimulationResponse:
-    return handle_simulation_request(request)
+    return execute_simulation(request)
 
 
 router.include_router(legacy_router)

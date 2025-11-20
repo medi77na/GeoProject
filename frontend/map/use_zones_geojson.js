@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { apiFetch } from "../services/api_client";
+
 export function useZonesGeoJson() {
     const [geojson, setGeojson] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -10,7 +12,7 @@ export function useZonesGeoJson() {
         setLoading(true);
         setError(null);
 
-        fetch("/api/v1/map/zones")
+        apiFetch("/api/v1/map/zones")
             .then(async (response) => {
                 if (!response.ok) {
                     throw new Error(`Failed to load zones (status ${response.status})`);

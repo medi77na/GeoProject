@@ -1,6 +1,5 @@
-from backend.models import SimulationRequest
+from backend.models import KPIResult, SimulationRequest
 from backend.services import (
-    KPIResult,
     SimulationParams,
     SimulationResult,
     compute_kpis,

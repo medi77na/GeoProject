@@ -3,7 +3,7 @@ import { useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet.heat";
 
-import { HEATMAP_GRADIENT } from "../zone_styles";
+import { HEATMAP_GRADIENT } from "./zone_styles";
 
 export function HeatmapLayer({ heatmapData }) {
     const map = useMap();

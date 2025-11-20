@@ -9,12 +9,12 @@ from statistics import mean
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 from backend.models import (
+    KPIResult,
     RecommendationItem,
     RecommendationResult,
     SeverityLevel,
     SimulationResponse,
 )
-from .kpi_calculator import KPIResult
 
 # Order used to compare severity levels.
 SeverityOrder: Dict[SeverityLevel, int] = {
@@ -51,7 +51,9 @@ def _compute_pm25_metrics(
         zone_avg = {
             zone: float(mean(values)) for zone, values in simulation.pollution.items()
         }
-        zone_max = {zone: float(max(values)) for zone, values in simulation.pollution.items()}
+        zone_max = {
+            zone: float(max(values)) for zone, values in simulation.pollution.items()
+        }
 
     overall_avg = float(mean(zone_avg.values())) if zone_avg else 0.0
     overall_max = float(max(zone_max.values())) if zone_max else 0.0
@@ -82,7 +84,9 @@ def _compute_congestion(
     return {"per_zone": congestion, "max": max_congestion}
 
 
-def _indices_in_windows(time_series: Sequence[int], windows: Iterable[Tuple[int, int]]) -> List[int]:
+def _indices_in_windows(
+    time_series: Sequence[int], windows: Iterable[Tuple[int, int]]
+) -> List[int]:
     indices: List[int] = []
     for idx, minute in enumerate(time_series):
         minute_of_day = minute % (24 * 60)
@@ -138,7 +142,9 @@ def generate_recommendations(
     else:
         congestion_severity = "low"
 
-    severity_rank = max(SeverityOrder[base_severity], SeverityOrder[congestion_severity])
+    severity_rank = max(
+        SeverityOrder[base_severity], SeverityOrder[congestion_severity]
+    )
 
     pollution_high_zones = [
         zone
@@ -296,7 +302,9 @@ def generate_recommendations(
         f"Max congestion index: {congestion_max:.2f}",
     ]
     if severe_congestion_zones:
-        justification_parts.append(f"Severe congestion in: {', '.join(severe_congestion_zones)}")
+        justification_parts.append(
+            f"Severe congestion in: {', '.join(severe_congestion_zones)}"
+        )
     if combined_zones:
         justification_parts.append(
             f"High pollution and congestion overlap in: {', '.join(sorted(combined_zones))}"

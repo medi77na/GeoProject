@@ -8,7 +8,10 @@ mocked in tests to avoid real network calls.
 import os
 from typing import Optional
 
-from backend.models.recommendation_model import RecommendationRequest, RecommendationResult
+from backend.models.recommendation_model import (
+    RecommendationRequest,
+    RecommendationResult,
+)
 
 OPENROUTER_API_KEY_ENV = "OPENROUTER_API_KEY"
 

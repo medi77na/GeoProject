@@ -1,7 +1,7 @@
 import React from "react";
 import { GeoJSON } from "react-leaflet";
 
-import { getZoneStyle } from "../zone_styles";
+import { getZoneStyle } from "./zone_styles";
 
 const formatNumber = (value, decimals = 1, fallback = "n/a") => {
     if (typeof value !== "number" || Number.isNaN(value)) return fallback;

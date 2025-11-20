@@ -2,7 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from backend.models import SimulationRequest
-from backend.models.simulation import (
+from backend.models.simulation_request import (
     DEFAULT_DURATION_MINUTES,
     DEFAULT_TIME_STEP_MINUTES,
 )

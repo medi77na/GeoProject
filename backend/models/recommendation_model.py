@@ -1,7 +1,8 @@
+"""Recommendation request/response models used by the API."""
+
 from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
-
 
 SeverityLevel = Literal["low", "moderate", "high", "critical"]
 
@@ -36,8 +37,12 @@ class RecommendationResult(BaseModel):
 
 
 class RecommendationKpiZone(BaseModel):
-    name: str = Field(..., description="Zone name matching the simulation output.", examples=["Bello"])
-    pm25: float = Field(..., description="PM2.5 concentration for the zone.", examples=[68.0])
+    name: str = Field(
+        ..., description="Zone name matching the simulation output.", examples=["Bello"]
+    )
+    pm25: float = Field(
+        ..., description="PM2.5 concentration for the zone.", examples=[68.0]
+    )
     congestion: float = Field(
         ...,
         ge=0.0,
@@ -48,8 +53,12 @@ class RecommendationKpiZone(BaseModel):
 
 
 class RecommendationKpis(BaseModel):
-    pm25_max: float = Field(..., description="Maximum PM2.5 observed among all zones.", examples=[72.5])
-    pm25_avg: float = Field(..., description="Average PM2.5 across all zones.", examples=[48.3])
+    pm25_max: float = Field(
+        ..., description="Maximum PM2.5 observed among all zones.", examples=[72.5]
+    )
+    pm25_avg: float = Field(
+        ..., description="Average PM2.5 across all zones.", examples=[48.3]
+    )
     congestion_index: float = Field(
         ...,
         ge=0.0,
@@ -91,7 +100,9 @@ class RecommendationContext(BaseModel):
 
 
 class RecommendationRequest(BaseModel):
-    kpis: RecommendationKpis = Field(..., description="Aggregated KPIs from a simulation run.")
+    kpis: RecommendationKpis = Field(
+        ..., description="Aggregated KPIs from a simulation run."
+    )
     context: Optional[RecommendationContext] = Field(
         default=None,
         description="Additional environmental context related to the KPI snapshot.",
@@ -120,5 +131,7 @@ class RecommendationResponse(BaseModel):
     llm_commentary: Optional[str] = Field(
         default=None,
         description="Optional explanatory text from the AI model when enabled.",
-        examples=["Low wind and high PM2.5 triggered stricter restrictions around Bello."],
+        examples=[
+            "Low wind and high PM2.5 triggered stricter restrictions around Bello."
+        ],
     )

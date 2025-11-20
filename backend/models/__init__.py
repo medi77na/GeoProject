@@ -1,12 +1,4 @@
-from .simulation import (
-    KNOWN_ZONES,
-    PointData,
-    SimulationCompareRequest,
-    SimulationCompareResponse,
-    SimulationRequest,
-    SimulationResponse,
-    ZoneData,
-)
+from .kpi_model import KPIResult
 from .recommendation_model import (
     RecommendationContext,
     RecommendationItem,
@@ -16,6 +8,17 @@ from .recommendation_model import (
     RecommendationResponse,
     RecommendationResult,
     SeverityLevel,
+)
+from .simulation_request import (
+    KNOWN_ZONES,
+    SimulationCompareRequest,
+    SimulationRequest,
+)
+from .simulation_response import (
+    PointData,
+    SimulationCompareResponse,
+    SimulationResponse,
+    ZoneData,
 )
 
 __all__ = [
@@ -34,4 +37,5 @@ __all__ = [
     "RecommendationResponse",
     "RecommendationResult",
     "SeverityLevel",
+    "KPIResult",
 ]

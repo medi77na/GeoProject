@@ -1,9 +1,12 @@
+"""Simulation engine and supporting helpers for synthetic data generation."""
+
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
-from backend.models import SimulationRequest
-from backend.models.simulation import (
+import numpy as np
+
+from backend.models.simulation_request import (
     DEFAULT_CARGO_RESTRICTION_ENABLED,
     DEFAULT_DURATION_MINUTES,
     DEFAULT_HEAVY_VEHICLE_PERCENTAGE,
@@ -13,9 +16,94 @@ from backend.models.simulation import (
     DEFAULT_SPEED_LIMIT_FACTOR,
     DEFAULT_TIME_STEP_MINUTES,
     DEFAULT_TRAFFIC_BASE_LEVEL,
+    KNOWN_ZONES,
+    SimulationCompareRequest,
+    SimulationRequest,
 )
+from backend.models.simulation_response import (
+    SimulationCompareResponse,
+    SimulationResponse,
+)
+from backend.services.map_layers import derive_map_ready_layers
+from backend.utils import clamp_unit
 
-from .synthetic_data import SyntheticDataResult
+
+@dataclass
+class SyntheticDataResult:
+    time: List[int]
+    traffic: Dict[str, List[float]]
+    pollution: Dict[str, List[float]]
+
+
+def generate_synthetic_data(
+    zones: Sequence[str],
+    horizon: int = 24,
+    scenario: str = "A",
+    traffic_level: str = "medium",
+    seed: Optional[int] = None,
+) -> SyntheticDataResult:
+    """
+    Generate synthetic traffic and pollution time series per zone.
+
+    Args:
+        zones: list of zone names (e.g. ["Bello", "Medellin", "Envigado", "Itagui"]).
+        horizon: number of time steps.
+        scenario: "A" for baseline, "B" for an intervention with reduced traffic.
+        traffic_level: "low", "medium", or "high" global traffic intensity.
+        seed: optional random seed for reproducibility.
+    Returns:
+        SyntheticDataResult with:
+        - time: list of ints from 0 to horizon-1
+        - traffic: dict[zone] -> list[float] in approx [0, 1]
+        - pollution: dict[zone] -> list[float] >= 0
+    """
+
+    if horizon <= 0:
+        raise ValueError("horizon must be positive")
+    if scenario not in {"A", "B"}:
+        raise ValueError('scenario must be "A" or "B"')
+    if traffic_level not in {"low", "medium", "high"}:
+        raise ValueError('traffic_level must be "low", "medium", or "high"')
+
+    rng = np.random.default_rng(seed)
+    base_by_level = {
+        "low": 0.3,
+        "medium": 0.6,
+        "high": 0.85,
+    }
+    base_level = base_by_level[traffic_level]
+    peak_multiplier = 1.0 if scenario == "A" else 0.7
+
+    time = list(range(horizon))
+    traffic: Dict[str, List[float]] = {}
+    pollution: Dict[str, List[float]] = {}
+
+    for zone in zones:
+        zone_traffic: List[float] = []
+        zone_pollution: List[float] = []
+        zone_offset = rng.normal(0.0, 0.05)
+        for t in time:
+            morning_peak = np.sin(np.pi * t / max(horizon - 1, 1)) ** 2
+            evening_peak = np.sin(np.pi * (t - horizon / 2) / max(horizon - 1, 1)) ** 2
+            pattern = 0.4 * (morning_peak + evening_peak)
+            noise = rng.normal(0.0, 0.05)
+            value = base_level + pattern + zone_offset + noise
+            if scenario == "B" and (6 <= t <= 9 or 17 <= t <= 20):
+                value *= peak_multiplier
+            value = clamp_unit(value)
+            zone_traffic.append(value)
+
+            emission_coeff = 70.0
+            dispersion = 15.0
+            pollution_noise = rng.normal(0.0, 3.0)
+            c_value = emission_coeff * value - dispersion + pollution_noise
+            c_value = float(max(0.0, c_value))
+            zone_pollution.append(c_value)
+
+        traffic[zone] = zone_traffic
+        pollution[zone] = zone_pollution
+
+    return SyntheticDataResult(time=time, traffic=traffic, pollution=pollution)
 
 
 @dataclass
@@ -66,7 +154,6 @@ def _in_window(minute_of_day: int, windows: Sequence[Tuple[int, int]]) -> bool:
             if start <= minute_of_day < end:
                 return True
         else:
-            # Window crosses midnight.
             if minute_of_day >= start or minute_of_day < end:
                 return True
     return False
@@ -107,10 +194,6 @@ def _direction_factor(direction: Union[str, float, None]) -> float:
         }
         return mapping.get(code, 1.0)
     return 1.0
-
-
-def _clamp_unit(value: float) -> float:
-    return max(0.0, min(1.0, value))
 
 
 def _normalize_humidity(humidity: float) -> float:
@@ -214,9 +297,11 @@ def run_simulation(
         alpha=request.alpha if request.alpha is not None else params.alpha,
         beta=request.beta if request.beta is not None else params.beta,
         inertia=request.inertia if request.inertia is not None else params.inertia,
-        dispersion_factor=request.dispersion_factor
-        if request.dispersion_factor is not None
-        else params.dispersion_factor,
+        dispersion_factor=(
+            request.dispersion_factor
+            if request.dispersion_factor is not None
+            else params.dispersion_factor
+        ),
     )
 
     steps = min(request.total_steps(), len(synthetic_data.time))
@@ -293,8 +378,7 @@ def run_simulation(
         )
     else:
         time_modifiers = [
-            hour_modifiers[idx]
-            * (scenario_peak_multiplier if peak_mask[idx] else 1.0)
+            hour_modifiers[idx] * (scenario_peak_multiplier if peak_mask[idx] else 1.0)
             for idx in range(steps)
         ]
 
@@ -305,7 +389,7 @@ def run_simulation(
 
     sim_traffic: Dict[str, List[float]] = {}
     sim_pollution: Dict[str, List[float]] = {}
-    clamp = _clamp_unit
+    clamp = clamp_unit
 
     for zone, base_traffic_series in synthetic_data.traffic.items():
         if zone not in synthetic_data.pollution:
@@ -327,7 +411,9 @@ def run_simulation(
             base_rho *= base_multipliers[idx]
             base_rho = clamp(base_rho)
 
-            rho_t = (1.0 - tuned_params.inertia) * base_rho + tuned_params.inertia * rho_prev
+            rho_t = (
+                1.0 - tuned_params.inertia
+            ) * base_rho + tuned_params.inertia * rho_prev
             rho_t = clamp(rho_t)
 
             c_t = (
@@ -348,4 +434,51 @@ def run_simulation(
 
     return SimulationResult(
         time=time, traffic=sim_traffic, pollution=sim_pollution, scenario=scenario
+    )
+
+
+def execute_simulation(request: SimulationRequest) -> SimulationResponse:
+    """Run a full simulation pipeline and return map-ready outputs."""
+    zones = request.resolved_zones(KNOWN_ZONES)
+    steps = request.total_steps()
+
+    synthetic = generate_synthetic_data(
+        zones=zones,
+        horizon=steps,
+        scenario=request.scenario,
+        traffic_level=request.traffic_level,
+        seed=request.seed,
+    )
+
+    result = run_simulation(
+        request=request,
+        synthetic_data=synthetic,
+    )
+    zones_data, points_data, heatmap_data = derive_map_ready_layers(
+        zones=result.traffic.keys(),
+        pollution=result.pollution,
+        traffic=result.traffic,
+    )
+
+    return SimulationResponse(
+        scenario=result.scenario,
+        zones=list(result.traffic.keys()),
+        time=result.time,
+        traffic=result.traffic,
+        pollution=result.pollution,
+        zones_data=zones_data,
+        points_data=points_data,
+        heatmap_data=heatmap_data,
+    )
+
+
+def compare_simulations(request: SimulationCompareRequest) -> SimulationCompareResponse:
+    """Run two simulations using the same pipeline and package comparison output."""
+    result_a = execute_simulation(request.scenario_a)
+    result_b = execute_simulation(request.scenario_b)
+    return SimulationCompareResponse(
+        result_a=result_a,
+        result_b=result_b,
+        label_a=request.label_a,
+        label_b=request.label_b,
     )
